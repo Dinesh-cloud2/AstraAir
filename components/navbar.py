@@ -1,7 +1,13 @@
 import streamlit as st
 
-def show_navbar():
+def navbar():
 
-    st.title("🛰️ AstraAir")
+    left,right=st.columns([8,2])
 
-    st.caption("AI Powered Environmental Intelligence Platform")
+    with left:
+        st.title("🛰 AstraAir")
+
+        st.caption("AI Powered Environmental Intelligence Platform")
+
+    with right:
+        st.success("🟢 LIVE")

@@ -1,0 +1,10 @@
+PRIMARY = "#2563EB"
+SUCCESS = "#00C853"
+WARNING = "#FF9800"
+DANGER = "#F44336"
+BACKGROUND = "#07111F"
+TEXT = "#FFFFFF"
+
+APP_NAME = "AstraAir"
+
+TAGLINE = "From Space to Smarter Air"
