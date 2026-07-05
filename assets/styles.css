@@ -1,0 +1,31 @@
+.main{
+    background:#07111F;
+}
+
+.hero{
+    text-align:center;
+    padding:50px;
+    border-radius:20px;
+    background:linear-gradient(135deg,#07111F,#0D1B2A,#112240);
+    color:white;
+}
+
+.card{
+    background:rgba(255,255,255,0.08);
+    padding:20px;
+    border-radius:15px;
+    text-align:center;
+    backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,0.15);
+}
+
+.big-title{
+    font-size:55px;
+    font-weight:700;
+    color:white;
+}
+
+.subtitle{
+    font-size:24px;
+    color:#7DD3FC;
+}
