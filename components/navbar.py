@@ -1,13 +1,14 @@
 import streamlit as st
 
 def navbar():
-
-    left,right=st.columns([8,2])
-
-    with left:
-        st.title("🛰 AstraAir")
-
-        st.caption("AI Powered Environmental Intelligence Platform")
-
-    with right:
-        st.success("🟢 LIVE")
+    st.markdown("""
+    <div style="
+    padding:15px;
+    background:#0E1117;
+    border-radius:10px;
+    color:white;
+    font-size:18px;
+    ">
+        🛰 AstraAir | Dashboard | Live Map | AI Insights | Reports
+    </div>
+    """, unsafe_allow_html=True)

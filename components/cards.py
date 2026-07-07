@@ -1,14 +1,17 @@
-
 import streamlit as st
 
 def cards():
 
-    c1,c2,c3,c4=st.columns(4)
+    c1, c2, c3 = st.columns(3)
 
-    c1.metric("🌍 Cities","500+")
+    with c1:
+        st.info("🛰️ Satellite Data")
+        st.write("Real-time environmental monitoring from space.")
 
-    c2.metric("🛰 Satellites","Live")
+    with c2:
+        st.success("🌦️ Weather Intelligence")
+        st.write("Live weather updates and forecasting.")
 
-    c3.metric("🤖 AI Models","4")
-
-    c4.metric("⚡ Status","Online")
+    with c3:
+        st.warning("🤖 AI Insights")
+        st.write("AI-powered air quality analysis and predictions.")
