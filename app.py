@@ -1,6 +1,7 @@
 import streamlit as st
 
 from components.sidebar import sidebar
+from pages.map_page import map_page
 from components.navbar import navbar
 from components.hero import hero
 from components.cards import cards
@@ -26,6 +27,10 @@ if page == "🏠 Home":
     footer()
 elif page == "🌦️ Weather":
     weather_page()
+    footer()
+
+elif page == "🗺️ AQI Map":
+    map_page()
     footer()
 else:
     st.title(page)
