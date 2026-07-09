@@ -9,6 +9,7 @@ from pages.analytics import analytics_page
 from components.stats import stats
 from pages.weather_page import weather_page
 from components.footer import footer
+from pages.reports import reports_page
 from pages.ai_insights import ai_insights_page
 
 
@@ -41,7 +42,9 @@ elif page == "📊 Analytics":
 elif page == "🤖 AI Insights":
     ai_insights_page()
     footer()
-
+elif page == "📄 Reports":
+    reports_page()
+    footer()
 else:
     st.title(page)
     st.info("This page will be built in the next sprint.")

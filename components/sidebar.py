@@ -13,8 +13,9 @@ def sidebar():
                 "🏠 Home",
                 "🌦️ Weather",
                 "🗺️ AQI Map",
-                "🤖 AI Insights",
                 "📊 Analytics",
+                "🤖 AI Insights",
+                "📄 Reports",
                 "ℹ️ About"
             ]
         )
