@@ -2,34 +2,51 @@ import streamlit as st
 import pandas as pd
 import folium
 from streamlit_folium import st_folium
+
 from services.weather import get_weather
+from services.aqi import get_live_aqi
+
+
+def get_aqi_label(aqi):
+    labels = {
+        1: "Good",
+        2: "Fair",
+        3: "Moderate",
+        4: "Poor",
+        5: "Very Poor"
+    }
+    return labels.get(aqi, "Unknown")
+
 
 def get_aqi_color(aqi):
-    if aqi <= 50:
+    if aqi == 1:
         return "green"
-    elif aqi <= 100:
+    elif aqi == 2:
         return "blue"
-    elif aqi <= 150:
+    elif aqi == 3:
         return "orange"
-    elif aqi <= 200:
+    elif aqi == 4:
         return "red"
     else:
         return "darkred"
 
+
 def get_health_advice(aqi):
-    if aqi <= 50:
-        return "Good air quality. Outdoor activities are safe."
-    elif aqi <= 100:
+    if aqi == 1:
+        return "Air quality is good. Outdoor activities are safe."
+    elif aqi == 2:
+        return "Fair air quality. Most people can continue normal activity."
+    elif aqi == 3:
         return "Moderate air quality. Sensitive people should be cautious."
-    elif aqi <= 150:
-        return "Unhealthy for sensitive groups. Reduce long outdoor activity."
-    elif aqi <= 200:
-        return "Poor air quality. Wear a mask outdoors."
+    elif aqi == 4:
+        return "Poor air quality. Reduce outdoor activity."
     else:
         return "Very poor air quality. Avoid outdoor exposure."
 
+
 def map_page():
-    st.title("🗺️ Interactive India AQI Map")
+
+    st.title("🗺️ Live India AQI Map")
 
     df = pd.read_csv("data/cities.csv")
 
@@ -40,39 +57,62 @@ def map_page():
     )
 
     for _, row in df.iterrows():
+
         city = row["City"]
-        aqi = int(row["AQI"])
+        lat = row["Latitude"]
+        lon = row["Longitude"]
 
         weather = get_weather(city)
+        air = get_live_aqi(lat, lon)
+
+        if air:
+            live_aqi = air["aqi"]
+            aqi_label = get_aqi_label(live_aqi)
+            color = get_aqi_color(live_aqi)
+            advice = get_health_advice(live_aqi)
+
+            pollution_text = f"""
+            OpenWeather AQI: {live_aqi} ({aqi_label})<br>
+            PM2.5: {air['pm2_5']} µg/m³<br>
+            PM10: {air['pm10']} µg/m³<br>
+            NO₂: {air['no2']} µg/m³<br>
+            O₃: {air['o3']} µg/m³<br>
+            CO: {air['co']} µg/m³<br>
+            """
+        else:
+            live_aqi = 3
+            color = "gray"
+            advice = "AQI data unavailable."
+            pollution_text = "AQI data unavailable.<br>"
 
         if weather:
             weather_text = f"""
-            🌡 Temp: {weather['temperature']} °C<br>
-            💧 Humidity: {weather['humidity']} %<br>
-            🌬 Wind: {weather['wind']} m/s<br>
-            ☁ Condition: {weather['description']}<br>
+            Temperature: {weather['temperature']} °C<br>
+            Humidity: {weather['humidity']} %<br>
+            Wind: {weather['wind']} m/s<br>
+            Condition: {weather['description']}<br>
             """
         else:
-            weather_text = "Weather data unavailable<br>"
+            weather_text = "Weather data unavailable.<br>"
 
         popup = f"""
-        <b>{city}</b><br>
-        AQI: {aqi}<br>
+        <b>{city}</b><br><br>
+        {pollution_text}
         {weather_text}
-        <b>Advice:</b> {get_health_advice(aqi)}
+        <b>Advice:</b> {advice}
         """
 
         folium.CircleMarker(
-            location=[row["Latitude"], row["Longitude"]],
+            location=[lat, lon],
             radius=10,
             popup=popup,
-            tooltip=city,
-            color=get_aqi_color(aqi),
+            tooltip=f"{city} - AQI {live_aqi}",
+            color=color,
             fill=True,
-            fill_color=get_aqi_color(aqi),
+            fill_color=color,
             fill_opacity=0.8
         ).add_to(m)
 
     st_folium(m, width=1200, height=650)
 
-    st.caption("AQI values are sample values for now. Weather is live from OpenWeather.")
+    st.caption("AQI is live from OpenWeather Air Pollution API. Scale: 1 Good → 5 Very Poor.")
