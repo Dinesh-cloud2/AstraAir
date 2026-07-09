@@ -2,161 +2,113 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
+from services.aqi import get_live_aqi
+
+
+def get_aqi_label(aqi):
+    labels = {
+        1: "Good",
+        2: "Fair",
+        3: "Moderate",
+        4: "Poor",
+        5: "Very Poor"
+    }
+    return labels.get(aqi, "Unknown")
+
 
 def analytics_page():
 
-    st.title("📊 Environmental Analytics")
+    st.title("📊 Live Environmental Analytics")
 
     df = pd.read_csv("data/cities.csv")
 
-    st.sidebar.subheader("📊 Analytics Filter")
+    live_rows = []
+
+    for _, row in df.iterrows():
+        air = get_live_aqi(row["Latitude"], row["Longitude"])
+
+        if air:
+            live_rows.append({
+                "City": row["City"],
+                "Latitude": row["Latitude"],
+                "Longitude": row["Longitude"],
+                "AQI": air["aqi"],
+                "AQI_Label": get_aqi_label(air["aqi"]),
+                "PM2.5": air["pm2_5"],
+                "PM10": air["pm10"],
+                "NO2": air["no2"],
+                "O3": air["o3"],
+                "CO": air["co"],
+                "Temperature": row["Temperature"],
+                "Humidity": row["Humidity"],
+                "Wind": row["Wind"]
+            })
+
+    live_df = pd.DataFrame(live_rows)
+
+    if live_df.empty:
+        st.error("Live AQI data not available.")
+        return
 
     selected_city = st.sidebar.selectbox(
         "Select City",
-        ["All"] + sorted(df["City"].unique().tolist())
+        ["All"] + sorted(live_df["City"].unique().tolist())
     )
 
     if selected_city != "All":
-        df = df[df["City"] == selected_city]
+        live_df = live_df[live_df["City"] == selected_city]
 
     c1, c2, c3, c4 = st.columns(4)
 
-    c1.metric("🌍 Cities", len(df))
-    c2.metric("📈 Average AQI", round(df["AQI"].mean()))
-    c3.metric("🚨 Highest AQI", df["AQI"].max())
-    c4.metric("😊 Lowest AQI", df["AQI"].min())
-
-    st.success(f"""
-### 🌍 Environmental Summary
-
-📍 Total Cities Monitored: **{len(df)}**
-
-🚨 Highest AQI: **{df['AQI'].max()}**
-
-😊 Lowest AQI: **{df['AQI'].min()}**
-
-📈 Average AQI: **{round(df['AQI'].mean())}**
-""")
-
-    highest = df.loc[df["AQI"].idxmax()]
-    lowest = df.loc[df["AQI"].idxmin()]
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.warning(f"""
-### 🚨 Most Polluted City
-
-🏙️ {highest['City']}
-
-AQI: {highest['AQI']}
-""")
-
-    with col2:
-        st.success(f"""
-### 🌿 Cleanest City
-
-🏙️ {lowest['City']}
-
-AQI: {lowest['AQI']}
-""")
-
-    score = max(0, 100 - round(df["AQI"].mean() / 2))
-    st.metric("🌎 Environmental Health Score", f"{score}/100")
+    c1.metric("🌍 Cities", len(live_df))
+    c2.metric("📈 Avg AQI Level", round(live_df["AQI"].mean(), 2))
+    c3.metric("🚨 Highest AQI Level", live_df["AQI"].max())
+    c4.metric("😊 Lowest AQI Level", live_df["AQI"].min())
 
     st.divider()
 
     fig = px.bar(
-        df,
+        live_df,
         x="City",
         y="AQI",
         color="AQI",
         color_continuous_scale="RdYlGn_r",
-        title="AQI Across Cities"
+        title="Live AQI Level Across Cities"
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    trend = px.line(
-        df,
+    pollutant_fig = px.bar(
+        live_df,
         x="City",
-        y="AQI",
-        markers=True,
-        title="AQI Trend"
+        y=["PM2.5", "PM10", "NO2", "O3"],
+        title="Live Pollutant Comparison"
     )
-    st.plotly_chart(trend, use_container_width=True)
+    st.plotly_chart(pollutant_fig, use_container_width=True)
 
-    temp_fig = px.bar(
-        df,
-        x="City",
-        y="Temperature",
-        color="Temperature",
-        title="Temperature Across Cities"
+    st.subheader("🚨 Top Polluted Cities")
+    st.dataframe(
+        live_df.sort_values("AQI", ascending=False).head(5),
+        use_container_width=True
     )
-    st.plotly_chart(temp_fig, use_container_width=True)
-
-    humidity_fig = px.bar(
-        df,
-        x="City",
-        y="Humidity",
-        color="Humidity",
-        title="Humidity Across Cities"
-    )
-    st.plotly_chart(humidity_fig, use_container_width=True)
-
-    wind_fig = px.bar(
-        df,
-        x="City",
-        y="Wind",
-        color="Wind",
-        title="Wind Speed Across Cities"
-    )
-    st.plotly_chart(wind_fig, use_container_width=True)
-
-    st.divider()
-
-    st.subheader("🚨 Top 5 Polluted Cities")
-    top5 = df.sort_values("AQI", ascending=False).head(5)
-    st.dataframe(top5, use_container_width=True)
 
     st.subheader("🌿 Cleanest Cities")
-    clean = df.sort_values("AQI").head(5)
-    st.dataframe(clean, use_container_width=True)
+    st.dataframe(
+        live_df.sort_values("AQI").head(5),
+        use_container_width=True
+    )
 
     st.divider()
 
     pie = px.pie(
-        df,
-        names="City",
-        values="AQI",
-        title="AQI Contribution by City"
+        live_df,
+        names="AQI_Label",
+        title="AQI Category Distribution"
     )
     st.plotly_chart(pie, use_container_width=True)
 
-    def category(aqi):
-        if aqi <= 50:
-            return "Good"
-        elif aqi <= 100:
-            return "Moderate"
-        elif aqi <= 150:
-            return "Unhealthy"
-        else:
-            return "Very Poor"
-
-    df["Category"] = df["AQI"].apply(category)
-
-    category_fig = px.histogram(
-        df,
-        x="Category",
-        color="Category",
-        title="AQI Category Distribution"
-    )
-    st.plotly_chart(category_fig, use_container_width=True)
-
-    st.divider()
-
     st.download_button(
-        "📥 Download Analytics CSV",
-        data=df.to_csv(index=False),
-        file_name="astraair_analytics.csv",
+        "📥 Download Live Analytics CSV",
+        data=live_df.to_csv(index=False),
+        file_name="astraair_live_analytics.csv",
         mime="text/csv"
     )
