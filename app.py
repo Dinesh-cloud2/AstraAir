@@ -9,6 +9,8 @@ from pages.analytics import analytics_page
 from components.stats import stats
 from pages.weather_page import weather_page
 from components.footer import footer
+from pages.ai_insights import ai_insights_page
+
 
 st.set_page_config(
     page_title="AstraAir",
@@ -35,6 +37,9 @@ elif page == "🗺️ AQI Map":
     footer()
 elif page == "📊 Analytics":
     analytics_page()
+    footer()
+elif page == "🤖 AI Insights":
+    ai_insights_page()
     footer()
 
 else:
