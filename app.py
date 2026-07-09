@@ -5,6 +5,7 @@ from pages.map_page import map_page
 from components.navbar import navbar
 from components.hero import hero
 from components.cards import cards
+from pages.analytics import analytics_page
 from components.stats import stats
 from pages.weather_page import weather_page
 from components.footer import footer
@@ -32,6 +33,10 @@ elif page == "🌦️ Weather":
 elif page == "🗺️ AQI Map":
     map_page()
     footer()
+elif page == "📊 Analytics":
+    analytics_page()
+    footer()
+
 else:
     st.title(page)
     st.info("This page will be built in the next sprint.")
