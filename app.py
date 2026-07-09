@@ -11,7 +11,7 @@ from pages.weather_page import weather_page
 from components.footer import footer
 from pages.reports import reports_page
 from pages.ai_insights import ai_insights_page
-
+from pages.about import about_page
 
 st.set_page_config(
     page_title="AstraAir",
@@ -44,6 +44,9 @@ elif page == "🤖 AI Insights":
     footer()
 elif page == "📄 Reports":
     reports_page()
+    footer()
+elif page == "ℹ️ About":
+    about_page()
     footer()
 else:
     st.title(page)
