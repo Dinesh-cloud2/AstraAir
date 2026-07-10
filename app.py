@@ -12,6 +12,7 @@ from components.footer import footer
 from pages.reports import reports_page
 from pages.ai_insights import ai_insights_page
 from pages.about import about_page
+from pages.satellite_page import satellite_page
 
 st.set_page_config(
     page_title="AstraAir",
@@ -47,6 +48,9 @@ elif page == "📄 Reports":
     footer()
 elif page == "ℹ️ About":
     about_page()
+    footer()
+elif page == "🛰️ Satellite Explorer":
+    satellite_page()
     footer()
 else:
     st.title(page)
