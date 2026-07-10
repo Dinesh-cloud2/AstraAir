@@ -7,41 +7,12 @@ from services.weather import get_weather
 from services.aqi import get_live_aqi
 
 
-def get_aqi_label(aqi):
-    labels = {
-        1: "Good",
-        2: "Fair",
-        3: "Moderate",
-        4: "Poor",
-        5: "Very Poor"
-    }
-    return labels.get(aqi, "Unknown")
+from utils.aqi_utils import (
+    get_aqi_label,
+    get_aqi_color,
+    get_health_advice
+)
 
-
-def get_aqi_color(aqi):
-    if aqi == 1:
-        return "green"
-    elif aqi == 2:
-        return "blue"
-    elif aqi == 3:
-        return "orange"
-    elif aqi == 4:
-        return "red"
-    else:
-        return "darkred"
-
-
-def get_health_advice(aqi):
-    if aqi == 1:
-        return "Air quality is good. Outdoor activities are safe."
-    elif aqi == 2:
-        return "Fair air quality. Most people can continue normal activity."
-    elif aqi == 3:
-        return "Moderate air quality. Sensitive people should be cautious."
-    elif aqi == 4:
-        return "Poor air quality. Reduce outdoor activity."
-    else:
-        return "Very poor air quality. Avoid outdoor exposure."
 
 
 def map_page():
