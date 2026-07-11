@@ -2,11 +2,17 @@ import ee
 
 from satellite.gee import initialize_gee
 
-initialize_gee()
 
+def get_no2_tile_url(start_date, end_date):
 
-def get_no2_tile_url(start_date, end_date, opacity=0.75):
-    india = ee.Geometry.Rectangle([68.0, 6.0, 97.5, 37.5])
+    initialize_gee()
+
+    india = ee.Geometry.Rectangle([
+        68.0,
+        6.0,
+        97.5,
+        37.5
+    ])
 
     collection = (
         ee.ImageCollection("COPERNICUS/S5P/OFFL/L3_NO2")
@@ -22,7 +28,7 @@ def get_no2_tile_url(start_date, end_date, opacity=0.75):
 
     image = collection.mean().clip(india)
 
-    visualization = {
+    vis_params = {
         "min": 0.0,
         "max": 0.0002,
         "palette": [
@@ -31,11 +37,12 @@ def get_no2_tile_url(start_date, end_date, opacity=0.75):
             "00ff00",
             "ffff00",
             "ff7f00",
-            "ff0000",
-        ],
-        "opacity": opacity,
+            "ff0000"
+        ]
     }
 
-    map_id = image.getMapId(visualization)
+    map_id = image.getMapId(vis_params)
 
-    return map_id["tile_fetcher"].url_format, image_count
+    tile_url = map_id["tile_fetcher"].url_format
+
+    return tile_url, image_count
