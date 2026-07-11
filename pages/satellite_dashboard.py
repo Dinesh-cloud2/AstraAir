@@ -5,12 +5,12 @@ import streamlit as st
 from streamlit_folium import st_folium
 
 from satellite.aerosol import get_aerosol_tile_url
-from satellite.no2 import get_no2_tile_url
+from satellite.fires import get_fire_tile_url
 from satellite.hcho import get_hcho_tile_url
+from satellite.no2 import get_no2_tile_url
 
 
 def satellite_dashboard():
-
     st.title("🛰️ Satellite Intelligence Dashboard")
 
     # Session state
@@ -29,8 +29,9 @@ def satellite_dashboard():
         [
             "Sentinel-5P NO₂",
             "Sentinel-5P HCHO (Formaldehyde)",
-            "Sentinel-5P Aerosol Index"
-        ]
+            "Sentinel-5P Aerosol Index",
+            "NASA FIRMS Fire Hotspots",
+        ],
     )
 
     # Date selection
@@ -40,14 +41,14 @@ def satellite_dashboard():
         start_date = st.date_input(
             "Start Date",
             value=date(2025, 7, 1),
-            key="satellite_start"
+            key="satellite_start",
         )
 
     with col2:
         end_date = st.date_input(
             "End Date",
             value=date(2025, 7, 10),
-            key="satellite_end"
+            key="satellite_end",
         )
 
     # Opacity
@@ -56,7 +57,7 @@ def satellite_dashboard():
         min_value=0.2,
         max_value=1.0,
         value=0.7,
-        step=0.1
+        step=0.1,
     )
 
     if start_date >= end_date:
@@ -70,13 +71,13 @@ def satellite_dashboard():
         load_clicked = st.button(
             "🛰️ Load Satellite Data",
             type="primary",
-            use_container_width=True
+            use_container_width=True,
         )
 
     with clear_col:
         clear_clicked = st.button(
             "Clear Map",
-            use_container_width=True
+            use_container_width=True,
         )
 
     # Clear map
@@ -88,40 +89,26 @@ def satellite_dashboard():
 
     # Load satellite data
     if load_clicked:
-
         with st.spinner("Processing satellite observations..."):
-
             start = start_date.strftime("%Y-%m-%d")
             end = end_date.strftime("%Y-%m-%d")
 
             if dataset == "Sentinel-5P NO₂":
-
-                tile_url, image_count = get_no2_tile_url(
-                    start,
-                    end
-                )
-
+                tile_url, image_count = get_no2_tile_url(start, end)
                 layer_name = "Sentinel-5P NO₂"
 
             elif dataset == "Sentinel-5P HCHO (Formaldehyde)":
-
-                tile_url, image_count = get_hcho_tile_url(
-                    start,
-                    end
-                )
-
+                tile_url, image_count = get_hcho_tile_url(start, end)
                 layer_name = "Sentinel-5P HCHO"
 
             elif dataset == "Sentinel-5P Aerosol Index":
-
-                tile_url, image_count = get_aerosol_tile_url(
-                    start,
-                    end
-                )
-
+                tile_url, image_count = get_aerosol_tile_url(start, end)
                 layer_name = "Sentinel-5P Aerosol Index"
 
-        # Save result
+            elif dataset == "NASA FIRMS Fire Hotspots":
+                tile_url, image_count = get_fire_tile_url(start, end)
+                layer_name = "NASA FIRMS Fire Hotspots"
+
         st.session_state.satellite_tile_url = tile_url
         st.session_state.satellite_image_count = image_count
         st.session_state.satellite_layer_name = layer_name
@@ -133,7 +120,6 @@ def satellite_dashboard():
 
     # Display map
     if tile_url:
-
         st.success(
             f"Loaded {image_count} observations for {layer_name}."
         )
@@ -141,16 +127,16 @@ def satellite_dashboard():
         satellite_map = folium.Map(
             location=[22.5, 79.0],
             zoom_start=5,
-            tiles="CartoDB positron"
+            tiles="CartoDB positron",
         )
 
         folium.TileLayer(
             tiles=tile_url,
-            attr="Google Earth Engine / Sentinel-5P",
+            attr="Google Earth Engine / Satellite Data",
             name=layer_name,
             overlay=True,
             control=True,
-            opacity=opacity
+            opacity=opacity,
         ).add_to(satellite_map)
 
         folium.LayerControl(
@@ -161,14 +147,13 @@ def satellite_dashboard():
             satellite_map,
             width=None,
             height=650,
-            key="persistent_satellite_map"
+            key="persistent_satellite_map",
         )
 
         st.divider()
 
         # Dataset interpretation
         if layer_name == "Sentinel-5P NO₂":
-
             st.subheader("🧠 NO₂ Interpretation")
 
             st.info(
@@ -183,7 +168,6 @@ Higher NO₂ may be associated with:
             )
 
         elif layer_name == "Sentinel-5P HCHO":
-
             st.subheader(
                 "🧪 HCHO / Formaldehyde Interpretation"
             )
@@ -200,7 +184,6 @@ Higher HCHO may be associated with:
             )
 
         elif layer_name == "Sentinel-5P Aerosol Index":
-
             st.subheader(
                 "🌫 Aerosol Index Interpretation"
             )
@@ -220,8 +203,30 @@ It is not a direct PM2.5 measurement.
 """
             )
 
-    else:
+        elif layer_name == "NASA FIRMS Fire Hotspots":
+            st.subheader("🔥 Active Fire Interpretation")
 
+            st.warning(
+                """
+NASA FIRMS satellite observations indicate active fire or
+thermal-anomaly detections.
+
+Possible environmental influences may include:
+
+- Crop-residue burning
+- Forest or vegetation fires
+- Biomass burning
+- Other high-temperature thermal events
+
+Fire detections can be compared with HCHO and Aerosol Index
+observations to investigate possible biomass-burning influence.
+
+A detected hotspot does not by itself prove the source or cause
+of regional air pollution.
+"""
+            )
+
+    else:
         st.info(
             "Select a dataset and click **Load Satellite Data**."
         )
