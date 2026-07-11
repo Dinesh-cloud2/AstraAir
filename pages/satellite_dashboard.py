@@ -5,25 +5,29 @@ import streamlit as st
 from streamlit_folium import st_folium
 
 from satellite.no2 import get_no2_tile_url
+from satellite.hcho import get_hcho_tile_url
 
 
 def satellite_dashboard():
 
     st.title("🛰️ Satellite Intelligence Dashboard")
 
-    st.write(
-        "Explore Sentinel-5P satellite observations "
-        "of atmospheric NO₂ pollution over India."
+    if "satellite_tile_url" not in st.session_state:
+        st.session_state.satellite_tile_url = None
+
+    if "satellite_image_count" not in st.session_state:
+        st.session_state.satellite_image_count = 0
+
+    if "satellite_layer_name" not in st.session_state:
+        st.session_state.satellite_layer_name = ""
+
+    dataset = st.selectbox(
+        "Select Satellite Dataset",
+        [
+            "Sentinel-5P NO₂",
+            "Sentinel-5P HCHO (Formaldehyde)"
+        ]
     )
-
-    # Keep satellite results after Streamlit reruns
-    if "no2_tile_url" not in st.session_state:
-        st.session_state.no2_tile_url = None
-
-    if "no2_image_count" not in st.session_state:
-        st.session_state.no2_image_count = 0
-
-    st.divider()
 
     col1, col2 = st.columns(2)
 
@@ -31,68 +35,75 @@ def satellite_dashboard():
         start_date = st.date_input(
             "Start Date",
             value=date(2025, 7, 1),
-            key="satellite_start_date"
+            key="satellite_start"
         )
 
     with col2:
         end_date = st.date_input(
             "End Date",
             value=date(2025, 7, 10),
-            key="satellite_end_date"
+            key="satellite_end"
         )
 
     opacity = st.slider(
-        "Satellite Layer Opacity",
-        min_value=0.2,
-        max_value=1.0,
-        value=0.7,
-        step=0.1,
-        key="satellite_opacity"
+        "Layer Opacity",
+        0.2,
+        1.0,
+        0.7,
+        0.1
     )
 
     if start_date >= end_date:
         st.error("End Date must be later than Start Date.")
         return
 
-    col_load, col_clear = st.columns([1, 1])
+    load_col, clear_col = st.columns(2)
 
-    with col_load:
+    with load_col:
         load_clicked = st.button(
             "🛰️ Load Satellite Data",
             type="primary",
             use_container_width=True
         )
 
-    with col_clear:
+    with clear_col:
         clear_clicked = st.button(
             "Clear Map",
             use_container_width=True
         )
 
     if clear_clicked:
-        st.session_state.no2_tile_url = None
-        st.session_state.no2_image_count = 0
+        st.session_state.satellite_tile_url = None
+        st.session_state.satellite_image_count = 0
+        st.session_state.satellite_layer_name = ""
         st.rerun()
 
     if load_clicked:
-        with st.spinner(
-            "Processing Sentinel-5P NO₂ observations..."
-        ):
-            tile_url, image_count = get_no2_tile_url(
-                start_date.strftime("%Y-%m-%d"),
-                end_date.strftime("%Y-%m-%d")
-            )
+        with st.spinner("Processing satellite observations..."):
 
-        st.session_state.no2_tile_url = tile_url
-        st.session_state.no2_image_count = image_count
+            start = start_date.strftime("%Y-%m-%d")
+            end = end_date.strftime("%Y-%m-%d")
 
-    tile_url = st.session_state.no2_tile_url
-    image_count = st.session_state.no2_image_count
+            if dataset == "Sentinel-5P NO₂":
+                tile_url, image_count = get_no2_tile_url(start, end)
+                layer_name = "Sentinel-5P NO₂"
+
+            else:
+                tile_url, image_count = get_hcho_tile_url(start, end)
+                layer_name = "Sentinel-5P HCHO"
+
+        st.session_state.satellite_tile_url = tile_url
+        st.session_state.satellite_image_count = image_count
+        st.session_state.satellite_layer_name = layer_name
+
+    tile_url = st.session_state.satellite_tile_url
+    image_count = st.session_state.satellite_image_count
+    layer_name = st.session_state.satellite_layer_name
 
     if tile_url:
 
         st.success(
-            f"Loaded {image_count} Sentinel-5P observations."
+            f"Loaded {image_count} observations for {layer_name}."
         )
 
         satellite_map = folium.Map(
@@ -104,7 +115,7 @@ def satellite_dashboard():
         folium.TileLayer(
             tiles=tile_url,
             attr="Google Earth Engine / Sentinel-5P",
-            name="Sentinel-5P NO₂",
+            name=layer_name,
             overlay=True,
             control=True,
             opacity=opacity
@@ -118,33 +129,36 @@ def satellite_dashboard():
             satellite_map,
             width=None,
             height=650,
-            key="persistent_no2_map"
-        )
-
-        st.caption(
-            "🔵 Lower NO₂ → 🟢 Moderate → 🟡 Elevated → 🔴 Higher NO₂"
+            key="persistent_satellite_map"
         )
 
         st.divider()
 
-        st.subheader("🧠 Satellite Interpretation")
+        if layer_name == "Sentinel-5P NO₂":
+            st.subheader("🧠 NO₂ Interpretation")
+            st.info(
+                """
+Higher NO₂ may be associated with:
 
-        st.info(
-            """
-Higher satellite-observed NO₂ may be influenced by:
-
-- Urban traffic emissions
+- Road traffic emissions
 - Industrial combustion
-- Thermal power generation
+- Thermal power plants
 - Biomass burning
-
-Satellite observations provide coverage in areas where ground
-monitoring stations may be limited.
 """
-        )
+            )
+
+        else:
+            st.subheader("🧪 HCHO / Formaldehyde Interpretation")
+            st.info(
+                """
+Higher HCHO may be associated with:
+
+- Biomass and crop-residue burning
+- Volatile organic compound emissions
+- Industrial chemical activity
+- Wildfire and vegetation-related emissions
+"""
+            )
 
     else:
-        st.info(
-            "Choose a valid date range and click "
-            "**Load Satellite Data**."
-        )
+        st.info("Select a dataset and click **Load Satellite Data**.")
