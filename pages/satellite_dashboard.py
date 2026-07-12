@@ -9,11 +9,18 @@ from satellite.fires import get_fire_tile_url
 from satellite.hcho import get_hcho_tile_url
 from satellite.no2 import get_no2_tile_url
 
+from services.satellite_intelligence import (
+    generate_satellite_interpretation,
+    get_region_names,
+    get_satellite_evidence,
+)
+
 
 def satellite_dashboard():
     st.title("🛰️ Satellite Intelligence Dashboard")
 
-    # Session state
+    # ---------- Session state ----------
+
     if "satellite_tile_url" not in st.session_state:
         st.session_state.satellite_tile_url = None
 
@@ -23,7 +30,14 @@ def satellite_dashboard():
     if "satellite_layer_name" not in st.session_state:
         st.session_state.satellite_layer_name = ""
 
-    # Dataset selector
+    if "satellite_evidence" not in st.session_state:
+        st.session_state.satellite_evidence = None
+
+    if "satellite_analysis" not in st.session_state:
+        st.session_state.satellite_analysis = None
+
+    # ---------- Dataset selector ----------
+
     dataset = st.selectbox(
         "Select Satellite Dataset",
         [
@@ -34,7 +48,15 @@ def satellite_dashboard():
         ],
     )
 
-    # Date selection
+    # ---------- Regional evidence selector ----------
+
+    region_name = st.selectbox(
+        "Select Evidence Analysis Region",
+        get_region_names(),
+    )
+
+    # ---------- Date selection ----------
+
     col1, col2 = st.columns(2)
 
     with col1:
@@ -51,7 +73,6 @@ def satellite_dashboard():
             key="satellite_end",
         )
 
-    # Opacity
     opacity = st.slider(
         "Layer Opacity",
         min_value=0.2,
@@ -64,7 +85,8 @@ def satellite_dashboard():
         st.error("End Date must be later than Start Date.")
         return
 
-    # Buttons
+    # ---------- Buttons ----------
+
     load_col, clear_col = st.columns(2)
 
     with load_col:
@@ -80,48 +102,86 @@ def satellite_dashboard():
             use_container_width=True,
         )
 
-    # Clear map
     if clear_clicked:
         st.session_state.satellite_tile_url = None
         st.session_state.satellite_image_count = 0
         st.session_state.satellite_layer_name = ""
+        st.session_state.satellite_evidence = None
+        st.session_state.satellite_analysis = None
+
         st.rerun()
 
-    # Load satellite data
+    # ---------- Load selected map layer ----------
+
     if load_clicked:
-        with st.spinner("Processing satellite observations..."):
+        with st.spinner(
+            "Processing satellite observations..."
+        ):
             start = start_date.strftime("%Y-%m-%d")
             end = end_date.strftime("%Y-%m-%d")
 
             if dataset == "Sentinel-5P NO₂":
-                tile_url, image_count = get_no2_tile_url(start, end)
+                tile_url, image_count = (
+                    get_no2_tile_url(start, end)
+                )
+
                 layer_name = "Sentinel-5P NO₂"
 
-            elif dataset == "Sentinel-5P HCHO (Formaldehyde)":
-                tile_url, image_count = get_hcho_tile_url(start, end)
+            elif dataset == (
+                "Sentinel-5P HCHO (Formaldehyde)"
+            ):
+                tile_url, image_count = (
+                    get_hcho_tile_url(start, end)
+                )
+
                 layer_name = "Sentinel-5P HCHO"
 
-            elif dataset == "Sentinel-5P Aerosol Index":
-                tile_url, image_count = get_aerosol_tile_url(start, end)
-                layer_name = "Sentinel-5P Aerosol Index"
+            elif dataset == (
+                "Sentinel-5P Aerosol Index"
+            ):
+                tile_url, image_count = (
+                    get_aerosol_tile_url(start, end)
+                )
 
-            elif dataset == "NASA FIRMS Fire Hotspots":
-                tile_url, image_count = get_fire_tile_url(start, end)
-                layer_name = "NASA FIRMS Fire Hotspots"
+                layer_name = (
+                    "Sentinel-5P Aerosol Index"
+                )
+
+            else:
+                tile_url, image_count = (
+                    get_fire_tile_url(start, end)
+                )
+
+                layer_name = (
+                    "NASA FIRMS Fire Hotspots"
+                )
 
         st.session_state.satellite_tile_url = tile_url
-        st.session_state.satellite_image_count = image_count
-        st.session_state.satellite_layer_name = layer_name
+        st.session_state.satellite_image_count = (
+            image_count
+        )
+        st.session_state.satellite_layer_name = (
+            layer_name
+        )
 
-    # Read saved result
+        # Clear old evidence when new dates/data are loaded
+        st.session_state.satellite_evidence = None
+        st.session_state.satellite_analysis = None
+
     tile_url = st.session_state.satellite_tile_url
-    image_count = st.session_state.satellite_image_count
-    layer_name = st.session_state.satellite_layer_name
+    image_count = (
+        st.session_state.satellite_image_count
+    )
+    layer_name = (
+        st.session_state.satellite_layer_name
+    )
 
-    # Display map
+    # ---------- Display map ----------
+
     if tile_url:
         st.success(
-            f"Loaded {image_count} observations for {layer_name}."
+            f"Loaded {image_count} observations "
+            f"for {layer_name}."
         )
 
         satellite_map = folium.Map(
@@ -132,7 +192,10 @@ def satellite_dashboard():
 
         folium.TileLayer(
             tiles=tile_url,
-            attr="Google Earth Engine / Satellite Data",
+            attr=(
+                "Google Earth Engine / "
+                "Satellite Data"
+            ),
             name=layer_name,
             overlay=True,
             control=True,
@@ -152,9 +215,151 @@ def satellite_dashboard():
 
         st.divider()
 
-        # Dataset interpretation
+        # ---------- Regional Evidence Engine ----------
+
+        st.subheader(
+            "🧠 Regional Satellite Evidence Engine"
+        )
+
+        st.write(
+            f"Selected region: **{region_name}**"
+        )
+
+        analyze_clicked = st.button(
+            "🔬 Analyze Regional Satellite Evidence",
+            use_container_width=True,
+        )
+
+        if analyze_clicked:
+            with st.spinner(
+                f"Analyzing satellite evidence "
+                f"for {region_name}..."
+            ):
+                evidence = get_satellite_evidence(
+                    start_date.strftime("%Y-%m-%d"),
+                    end_date.strftime("%Y-%m-%d"),
+                    region_name,
+                )
+
+            if evidence is None:
+                st.session_state.satellite_evidence = None
+                st.session_state.satellite_analysis = None
+
+                st.warning(
+                    "Insufficient satellite observations "
+                    "for the selected region and date range."
+                )
+
+            else:
+                analysis = (
+                    generate_satellite_interpretation(
+                        evidence
+                    )
+                )
+
+                st.session_state.satellite_evidence = (
+                    evidence
+                )
+                st.session_state.satellite_analysis = (
+                    analysis
+                )
+
+        evidence = (
+            st.session_state.satellite_evidence
+        )
+
+        analysis = (
+            st.session_state.satellite_analysis
+        )
+
+        if (
+            evidence is not None
+            and analysis is not None
+        ):
+            st.success(
+                f"Regional analysis completed for "
+                f"{evidence['region']}."
+            )
+
+            c1, c2, c3 = st.columns(3)
+
+            c1.metric(
+                "🧪 Mean HCHO",
+                evidence["hcho_mean"],
+            )
+
+            c2.metric(
+                "🌫 Mean Aerosol Index",
+                evidence["aerosol_mean"],
+            )
+
+            c3.metric(
+                "🔥 Fire Detection Pixels",
+                evidence[
+                    "fire_detection_pixels"
+                ],
+            )
+
+            st.subheader(
+                f"Evidence Level: "
+                f"{analysis['level']}"
+            )
+
+            st.info(
+                analysis["interpretation"]
+            )
+
+            if analysis["signals"]:
+                st.write("**Signals detected:**")
+
+                for signal in analysis["signals"]:
+                    st.write(f"• {signal}")
+
+            else:
+                st.write(
+                    "No prototype threshold signals "
+                    "were detected."
+                )
+
+            with st.expander(
+                "View observation details"
+            ):
+                st.write(
+                    "HCHO images:",
+                    evidence["hcho_image_count"],
+                )
+
+                st.write(
+                    "Aerosol images:",
+                    evidence[
+                        "aerosol_image_count"
+                    ],
+                )
+
+                st.write(
+                    "FIRMS images:",
+                    evidence[
+                        "fire_image_count"
+                    ],
+                )
+
+            st.caption(
+                "The current thresholds are prototype "
+                "decision rules, not validated scientific "
+                "classification standards. AstraAir reports "
+                "possible environmental influence and does "
+                "not claim causation without ground "
+                "validation."
+            )
+
+        st.divider()
+
+        # ---------- Dataset explanation ----------
+
         if layer_name == "Sentinel-5P NO₂":
-            st.subheader("🧠 NO₂ Interpretation")
+            st.subheader(
+                "🧠 NO₂ Interpretation"
+            )
 
             st.info(
                 """
@@ -183,7 +388,9 @@ Higher HCHO may be associated with:
 """
             )
 
-        elif layer_name == "Sentinel-5P Aerosol Index":
+        elif layer_name == (
+            "Sentinel-5P Aerosol Index"
+        ):
             st.subheader(
                 "🌫 Aerosol Index Interpretation"
             )
@@ -197,36 +404,36 @@ Higher positive Aerosol Index values may indicate:
 - Volcanic ash
 - Other UV-absorbing aerosol plumes
 
-The Aerosol Index is useful for detecting large aerosol events.
-
-It is not a direct PM2.5 measurement.
+The Aerosol Index is not a direct PM2.5 measurement.
 """
             )
 
-        elif layer_name == "NASA FIRMS Fire Hotspots":
-            st.subheader("🔥 Active Fire Interpretation")
+        elif layer_name == (
+            "NASA FIRMS Fire Hotspots"
+        ):
+            st.subheader(
+                "🔥 Active Fire Interpretation"
+            )
 
             st.warning(
                 """
-NASA FIRMS satellite observations indicate active fire or
+NASA FIRMS observations indicate active fire or
 thermal-anomaly detections.
 
-Possible environmental influences may include:
+Possible sources may include:
 
 - Crop-residue burning
 - Forest or vegetation fires
 - Biomass burning
 - Other high-temperature thermal events
 
-Fire detections can be compared with HCHO and Aerosol Index
-observations to investigate possible biomass-burning influence.
-
-A detected hotspot does not by itself prove the source or cause
-of regional air pollution.
+A hotspot does not by itself prove the cause of
+regional air pollution.
 """
             )
 
     else:
         st.info(
-            "Select a dataset and click **Load Satellite Data**."
+            "Select a dataset and click "
+            "**Load Satellite Data**."
         )
