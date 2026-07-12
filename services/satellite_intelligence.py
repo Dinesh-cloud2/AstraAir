@@ -3,24 +3,18 @@ import ee
 from satellite.gee import initialize_gee
 
 
-REGIONS = {
-    "India": [68.0, 6.0, 97.5, 37.5],
-    "Delhi NCR": [76.5, 28.1, 77.8, 29.2],
-    "Punjab": [73.8, 29.5, 76.9, 32.6],
-    "Haryana": [74.4, 27.6, 77.6, 30.9],
-    "Uttar Pradesh": [77.0, 23.8, 84.7, 30.5],
-    "Bihar": [83.3, 24.3, 88.3, 27.6],
-}
+SUPPORTED_REGIONS = [
+    "India",
+    "Delhi",
+    "Punjab",
+    "Haryana",
+    "Uttar Pradesh",
+    "Bihar",
+]
 
 
 def get_region_names():
-    return list(REGIONS.keys())
-
-
-def get_region_geometry(region_name):
-    bounds = REGIONS.get(region_name, REGIONS["India"])
-
-    return ee.Geometry.Rectangle(bounds)
+    return SUPPORTED_REGIONS
 
 
 def safe_number(value, digits=6):
@@ -28,6 +22,32 @@ def safe_number(value, digits=6):
         return 0.0
 
     return round(float(value), digits)
+
+
+def get_region_geometry(region_name):
+    boundaries = ee.FeatureCollection(
+        "FAO/GAUL/2015/level1"
+    )
+
+    india_states = boundaries.filter(
+        ee.Filter.eq("ADM0_NAME", "India")
+    )
+
+    if region_name == "India":
+        return india_states.geometry()
+
+    selected_region = india_states.filter(
+        ee.Filter.eq("ADM1_NAME", region_name)
+    )
+
+    region_count = selected_region.size().getInfo()
+
+    if region_count == 0:
+        raise ValueError(
+            f"Boundary not found for region: {region_name}"
+        )
+
+    return selected_region.geometry()
 
 
 def get_satellite_evidence(
@@ -40,14 +60,20 @@ def get_satellite_evidence(
     region = get_region_geometry(region_name)
 
     hcho_collection = (
-        ee.ImageCollection("COPERNICUS/S5P/OFFL/L3_HCHO")
-        .select("tropospheric_HCHO_column_number_density")
+        ee.ImageCollection(
+            "COPERNICUS/S5P/OFFL/L3_HCHO"
+        )
+        .select(
+            "tropospheric_HCHO_column_number_density"
+        )
         .filterDate(start_date, end_date)
         .filterBounds(region)
     )
 
     aerosol_collection = (
-        ee.ImageCollection("COPERNICUS/S5P/OFFL/L3_AER_AI")
+        ee.ImageCollection(
+            "COPERNICUS/S5P/OFFL/L3_AER_AI"
+        )
         .select("absorbing_aerosol_index")
         .filterDate(start_date, end_date)
         .filterBounds(region)
@@ -67,11 +93,7 @@ def get_satellite_evidence(
     if hcho_image_count == 0 or aerosol_image_count == 0:
         return None
 
-    hcho_image = hcho_collection.mean()
-
-    aerosol_image = aerosol_collection.mean()
-
-    hcho_stats = hcho_image.reduceRegion(
+    hcho_stats = hcho_collection.mean().reduceRegion(
         reducer=ee.Reducer.mean(),
         geometry=region,
         scale=10000,
@@ -79,7 +101,7 @@ def get_satellite_evidence(
         bestEffort=True,
     ).getInfo()
 
-    aerosol_stats = aerosol_image.reduceRegion(
+    aerosol_stats = aerosol_collection.mean().reduceRegion(
         reducer=ee.Reducer.mean(),
         geometry=region,
         scale=10000,
@@ -106,13 +128,10 @@ def get_satellite_evidence(
         fire_image = fire_collection.max()
 
         fire_mask = (
-            fire_image
-            .select("T21")
+            fire_image.select("T21")
             .gt(325)
             .And(
-                fire_image
-                .select("confidence")
-                .gte(30)
+                fire_image.select("confidence").gte(30)
             )
             .selfMask()
         )
@@ -148,7 +167,6 @@ def generate_satellite_interpretation(evidence):
 
     signals = []
 
-    # Prototype thresholds — not final scientific standards
     if hcho > 0.00015:
         signals.append("Elevated HCHO signal")
 
@@ -168,11 +186,11 @@ def generate_satellite_interpretation(evidence):
         level = "Strong Multi-Signal Evidence"
 
         interpretation = (
-            f"HCHO, absorbing aerosol and active-fire signals "
-            f"are simultaneously present over {region}. "
+            f"HCHO, absorbing aerosol and active-fire "
+            f"signals are simultaneously present over {region}. "
             "The combined evidence may indicate possible "
-            "biomass-burning influence. Ground and local "
-            "monitoring validation is recommended."
+            "biomass-burning influence. Ground validation "
+            "is recommended."
         )
 
     elif signal_count == 2:
@@ -189,10 +207,9 @@ def generate_satellite_interpretation(evidence):
         level = "Limited Satellite Evidence"
 
         interpretation = (
-            f"Only one environmental satellite indicator is "
-            f"elevated over {region}. The available evidence "
-            "is insufficient to associate the observation "
-            "with a particular pollution source."
+            f"Only one satellite indicator is elevated over "
+            f"{region}. The available evidence is insufficient "
+            "to identify a particular pollution source."
         )
 
     else:
