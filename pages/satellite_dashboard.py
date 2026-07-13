@@ -1,4 +1,8 @@
 from datetime import date
+from satellite.regions import get_region_center
+from services.environmental_fusion import (
+    get_environmental_fusion
+)
 
 import folium
 import streamlit as st
@@ -35,6 +39,8 @@ def satellite_dashboard():
 
     if "satellite_analysis" not in st.session_state:
         st.session_state.satellite_analysis = None
+    if "environmental_fusion" not in st.session_state:
+        st.session_state.environmental_fusion = None
 
     # ---------- Dataset selector ----------
 
@@ -122,7 +128,12 @@ def satellite_dashboard():
 
             if dataset == "Sentinel-5P NO₂":
                 tile_url, image_count = (
-                    get_no2_tile_url(start, end)
+                    get_no2_tile_url(
+                        start, 
+                        end,
+                        region_name
+                    )
+          
                 )
 
                 layer_name = "Sentinel-5P NO₂"
@@ -131,7 +142,11 @@ def satellite_dashboard():
                 "Sentinel-5P HCHO (Formaldehyde)"
             ):
                 tile_url, image_count = (
-                    get_hcho_tile_url(start, end)
+                    get_hcho_tile_url(
+                        start, 
+                        end, 
+                        region_name
+                    )
                 )
 
                 layer_name = "Sentinel-5P HCHO"
@@ -140,7 +155,7 @@ def satellite_dashboard():
                 "Sentinel-5P Aerosol Index"
             ):
                 tile_url, image_count = (
-                    get_aerosol_tile_url(start, end)
+                    get_aerosol_tile_url(start, end , region_name)
                 )
 
                 layer_name = (
@@ -149,7 +164,7 @@ def satellite_dashboard():
 
             else:
                 tile_url, image_count = (
-                    get_fire_tile_url(start, end)
+                    get_fire_tile_url(start, end , region_name)
                 )
 
                 layer_name = (
@@ -167,6 +182,7 @@ def satellite_dashboard():
         # Clear old evidence when new dates/data are loaded
         st.session_state.satellite_evidence = None
         st.session_state.satellite_analysis = None
+        st.session_state.environmental_fusion = None
 
     tile_url = st.session_state.satellite_tile_url
     image_count = (
@@ -184,9 +200,13 @@ def satellite_dashboard():
             f"for {layer_name}."
         )
 
+        map_lat, map_lon, map_zoom = get_region_center(
+            region_name
+       )
+
         satellite_map = folium.Map(
-            location=[22.5, 79.0],
-            zoom_start=5,
+            location=[map_lat, map_lon],
+            zoom_start=map_zoom,
             tiles="CartoDB positron",
         )
 
@@ -353,6 +373,109 @@ def satellite_dashboard():
             )
 
         st.divider()
+
+        st.subheader(
+            "🌍 Satellite + Live Environmental Fusion"
+        )
+
+        fusion_clicked = st.button(
+            "🧠 Run Environmental Fusion Analysis",
+            use_container_width=True,
+        )
+
+        if fusion_clicked:
+            with st.spinner(
+                "Combining satellite observations, "
+                "live AQI and weather..."
+            ):
+                fusion_result = get_environmental_fusion(
+                    start_date.strftime("%Y-%m-%d"),
+                    end_date.strftime("%Y-%m-%d"),
+                    region_name,
+                )
+
+            st.session_state.environmental_fusion = (
+                fusion_result
+            )
+
+        fusion_result = (
+            st.session_state.environmental_fusion
+        )
+
+        if fusion_result is not None:
+            live = fusion_result["live"]
+            fusion = fusion_result["fusion"]
+
+            st.success(
+                f"Fusion analysis completed for "
+                f"{region_name}."
+            )
+
+            f1, f2, f3, f4 = st.columns(4)
+
+            f1.metric(
+                "Live AQI Level",
+                live["average_aqi"],
+            )
+
+            f2.metric(
+                "Average PM2.5",
+                live["average_pm2_5"],
+            )
+
+            f3.metric(
+                "Average PM10",
+                live["average_pm10"],
+            )
+
+            f4.metric(
+                "Average Wind",
+                f"{live['average_wind']} m/s",
+            )
+
+            w1, w2, w3 = st.columns(3)
+
+            w1.metric(
+                "Temperature",
+                f"{live['average_temperature']} °C",
+            )
+
+            w2.metric(
+                "Humidity",
+                f"{live['average_humidity']} %",
+            )
+
+            w3.metric(
+                "Surface NO₂",
+                live["average_no2"],
+            )
+
+            st.subheader(
+                f"Fusion Level: {fusion['level']}"
+            )
+
+            st.warning(fusion["summary"])
+
+            if fusion["signals"]:
+                st.write("**Combined signals:**")
+
+                for signal in fusion["signals"]:
+                    st.write(f"• {signal}")
+
+            with st.expander(
+                "View sampled city data"
+            ):
+                st.dataframe(
+                    live["locations"],
+                    use_container_width=True,
+                )
+
+            st.caption(
+                "This is a prototype evidence-fusion system. "
+                "It combines satellite observations with "
+                "OpenWeather air-pollution and weather data. "
+                "It does not prove emission-source causation."
+            )
 
         # ---------- Dataset explanation ----------
 

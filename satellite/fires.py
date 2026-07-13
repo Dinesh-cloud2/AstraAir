@@ -1,23 +1,24 @@
 import ee
 
 from satellite.gee import initialize_gee
+from satellite.regions import get_region_geometry
 
 
-def get_fire_tile_url(start_date, end_date):
+def get_fire_tile_url(
+    start_date,
+    end_date,
+    region_name="India"
+):
+
     initialize_gee()
 
-    india = ee.Geometry.Rectangle([
-        68.0,
-        6.0,
-        97.5,
-        37.5,
-    ])
+    region = get_region_geometry(region_name)
 
     collection = (
         ee.ImageCollection("FIRMS")
         .select("T21")
         .filterDate(start_date, end_date)
-        .filterBounds(india)
+        .filterBounds(region)
     )
 
     image_count = collection.size().getInfo()
@@ -25,7 +26,11 @@ def get_fire_tile_url(start_date, end_date):
     if image_count == 0:
         return None, 0
 
-    fire_image = collection.max().clip(india)
+    fire_image = (
+        collection
+        .max()
+        .clip(region)
+    )
 
     vis_params = {
         "min": 325.0,
@@ -33,11 +38,16 @@ def get_fire_tile_url(start_date, end_date):
         "palette": [
             "ffff00",
             "ff8800",
-            "ff0000",
-        ],
+            "ff0000"
+        ]
     }
 
-    map_id = fire_image.getMapId(vis_params)
-    tile_url = map_id["tile_fetcher"].url_format
+    map_id = fire_image.getMapId(
+        vis_params
+    )
+
+    tile_url = map_id[
+        "tile_fetcher"
+    ].url_format
 
     return tile_url, image_count
