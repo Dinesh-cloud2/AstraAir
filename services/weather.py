@@ -1,8 +1,9 @@
-
+import os
 import requests
 from pathlib import Path
 
 env_path = Path(__file__).parent.parent / ".env"
+API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
 with open(env_path, "r") as f:
     API_KEY = f.read().split("=")[1].strip()
