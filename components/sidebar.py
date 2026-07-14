@@ -16,7 +16,6 @@ def sidebar():
                 "📊 Analytics",
                 "🤖 AI Insights",
                 "📄 Reports",
-                "🛰️SatelliteExplorer",
                 "🛰️ Satellite Intelligence",
                 "🧠 Training Data",
                 "ℹ️ About"
