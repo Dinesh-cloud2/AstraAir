@@ -1,29 +1,41 @@
 from datetime import date
-from satellite.regions import get_region_center
-from services.environmental_fusion import (
-    get_environmental_fusion
-)
 
 import folium
 import streamlit as st
 from streamlit_folium import st_folium
+
+from satellite.regions import (
+    get_region_names,
+    get_region_center,
+)
 
 from satellite.aerosol import get_aerosol_tile_url
 from satellite.fires import get_fire_tile_url
 from satellite.hcho import get_hcho_tile_url
 from satellite.no2 import get_no2_tile_url
 
+from services.environmental_fusion import (
+    get_environmental_fusion,
+)
+
 from services.satellite_intelligence import (
     generate_satellite_interpretation,
-    get_region_names,
     get_satellite_evidence,
 )
 
 
 def satellite_dashboard():
+
     st.title("🛰️ Satellite Intelligence Dashboard")
 
-    # ---------- Session state ----------
+    st.caption(
+        "Satellite layers use the selected historical date range. "
+        "Live AQI and weather values are current observations."
+    )
+
+    # ==========================================
+    # SESSION STATE
+    # ==========================================
 
     if "satellite_tile_url" not in st.session_state:
         st.session_state.satellite_tile_url = None
@@ -34,15 +46,21 @@ def satellite_dashboard():
     if "satellite_layer_name" not in st.session_state:
         st.session_state.satellite_layer_name = ""
 
+    if "satellite_loaded_region" not in st.session_state:
+        st.session_state.satellite_loaded_region = "India"
+
     if "satellite_evidence" not in st.session_state:
         st.session_state.satellite_evidence = None
 
     if "satellite_analysis" not in st.session_state:
         st.session_state.satellite_analysis = None
+
     if "environmental_fusion" not in st.session_state:
         st.session_state.environmental_fusion = None
 
-    # ---------- Dataset selector ----------
+    # ==========================================
+    # DATASET SELECTOR
+    # ==========================================
 
     dataset = st.selectbox(
         "Select Satellite Dataset",
@@ -54,14 +72,29 @@ def satellite_dashboard():
         ],
     )
 
-    # ---------- Regional evidence selector ----------
+    # ==========================================
+    # REGION SELECTOR
+    # ==========================================
+
+    try:
+        region_names = get_region_names()
+
+    except Exception as error:
+        st.error(
+            "Unable to load Indian states and Union Territories."
+        )
+
+        st.code(str(error))
+        return
 
     region_name = st.selectbox(
         "Select Evidence Analysis Region",
-        get_region_names(),
+        region_names,
     )
 
-    # ---------- Date selection ----------
+    # ==========================================
+    # DATE SELECTION
+    # ==========================================
 
     col1, col2 = st.columns(2)
 
@@ -88,10 +121,14 @@ def satellite_dashboard():
     )
 
     if start_date >= end_date:
-        st.error("End Date must be later than Start Date.")
+        st.error(
+            "End Date must be later than Start Date."
+        )
         return
 
-    # ---------- Buttons ----------
+    # ==========================================
+    # LOAD AND CLEAR BUTTONS
+    # ==========================================
 
     load_col, clear_col = st.columns(2)
 
@@ -109,100 +146,169 @@ def satellite_dashboard():
         )
 
     if clear_clicked:
+
         st.session_state.satellite_tile_url = None
         st.session_state.satellite_image_count = 0
         st.session_state.satellite_layer_name = ""
-        st.session_state.satellite_evidence = None
-        st.session_state.satellite_analysis = None
-
-        st.rerun()
-
-    # ---------- Load selected map layer ----------
-
-    if load_clicked:
-        with st.spinner(
-            "Processing satellite observations..."
-        ):
-            start = start_date.strftime("%Y-%m-%d")
-            end = end_date.strftime("%Y-%m-%d")
-
-            if dataset == "Sentinel-5P NO₂":
-                tile_url, image_count = (
-                    get_no2_tile_url(
-                        start, 
-                        end,
-                        region_name
-                    )
-          
-                )
-
-                layer_name = "Sentinel-5P NO₂"
-
-            elif dataset == (
-                "Sentinel-5P HCHO (Formaldehyde)"
-            ):
-                tile_url, image_count = (
-                    get_hcho_tile_url(
-                        start, 
-                        end, 
-                        region_name
-                    )
-                )
-
-                layer_name = "Sentinel-5P HCHO"
-
-            elif dataset == (
-                "Sentinel-5P Aerosol Index"
-            ):
-                tile_url, image_count = (
-                    get_aerosol_tile_url(start, end , region_name)
-                )
-
-                layer_name = (
-                    "Sentinel-5P Aerosol Index"
-                )
-
-            else:
-                tile_url, image_count = (
-                    get_fire_tile_url(start, end , region_name)
-                )
-
-                layer_name = (
-                    "NASA FIRMS Fire Hotspots"
-                )
-
-        st.session_state.satellite_tile_url = tile_url
-        st.session_state.satellite_image_count = (
-            image_count
-        )
-        st.session_state.satellite_layer_name = (
-            layer_name
-        )
-
-        # Clear old evidence when new dates/data are loaded
+        st.session_state.satellite_loaded_region = "India"
         st.session_state.satellite_evidence = None
         st.session_state.satellite_analysis = None
         st.session_state.environmental_fusion = None
 
+        st.rerun()
+
+    # ==========================================
+    # LOAD SATELLITE LAYER
+    # ==========================================
+
+    if load_clicked:
+
+        with st.spinner(
+            "Processing satellite observations..."
+        ):
+
+            start = start_date.strftime("%Y-%m-%d")
+            end = end_date.strftime("%Y-%m-%d")
+
+            try:
+
+                if dataset == "Sentinel-5P NO₂":
+
+                    tile_url, image_count = (
+                        get_no2_tile_url(
+                            start,
+                            end,
+                            region_name,
+                        )
+                    )
+
+                    layer_name = "Sentinel-5P NO₂"
+
+                elif dataset == (
+                    "Sentinel-5P HCHO (Formaldehyde)"
+                ):
+
+                    tile_url, image_count = (
+                        get_hcho_tile_url(
+                            start,
+                            end,
+                            region_name,
+                        )
+                    )
+
+                    layer_name = "Sentinel-5P HCHO"
+
+                elif dataset == (
+                    "Sentinel-5P Aerosol Index"
+                ):
+
+                    tile_url, image_count = (
+                        get_aerosol_tile_url(
+                            start,
+                            end,
+                            region_name,
+                        )
+                    )
+
+                    layer_name = (
+                        "Sentinel-5P Aerosol Index"
+                    )
+
+                else:
+
+                    tile_url, image_count = (
+                        get_fire_tile_url(
+                            start,
+                            end,
+                            region_name,
+                        )
+                    )
+
+                    layer_name = (
+                        "NASA FIRMS Fire Hotspots"
+                    )
+
+            except Exception as error:
+
+                st.error(
+                    "Satellite data could not be loaded."
+                )
+
+                st.code(str(error))
+                return
+
+        if tile_url is None:
+
+            st.warning(
+                "No satellite observations were found "
+                "for the selected region and date range."
+            )
+
+        else:
+
+            st.session_state.satellite_tile_url = (
+                tile_url
+            )
+
+            st.session_state.satellite_image_count = (
+                image_count
+            )
+
+            st.session_state.satellite_layer_name = (
+                layer_name
+            )
+
+            st.session_state.satellite_loaded_region = (
+                region_name
+            )
+
+            # Remove previous analysis when new data loads
+            st.session_state.satellite_evidence = None
+            st.session_state.satellite_analysis = None
+            st.session_state.environmental_fusion = None
+
+    # ==========================================
+    # READ SAVED RESULTS
+    # ==========================================
+
     tile_url = st.session_state.satellite_tile_url
+
     image_count = (
         st.session_state.satellite_image_count
     )
+
     layer_name = (
         st.session_state.satellite_layer_name
     )
 
-    # ---------- Display map ----------
+    loaded_region = (
+        st.session_state.satellite_loaded_region
+    )
+
+    # ==========================================
+    # DISPLAY SATELLITE MAP
+    # ==========================================
 
     if tile_url:
+
         st.success(
-            f"Loaded {image_count} observations "
-            f"for {layer_name}."
+            f"Loaded {image_count} observations for "
+            f"{layer_name} over {loaded_region}."
         )
 
-        map_lat, map_lon, map_zoom = get_region_center(
-            region_name
-       )
+        try:
+
+            map_lat, map_lon, map_zoom = (
+                get_region_center(
+                    loaded_region
+                )
+            )
+
+        except Exception:
+
+            map_lat = 22.5
+            map_lon = 79.0
+            map_zoom = 5
 
         satellite_map = folium.Map(
             location=[map_lat, map_lon],
@@ -230,19 +336,30 @@ def satellite_dashboard():
             satellite_map,
             width=None,
             height=650,
-            key="persistent_satellite_map",
+            key=(
+                f"satellite_map_"
+                f"{layer_name}_"
+                f"{loaded_region}"
+            ),
+        )
+
+        st.info(
+            "Region or dataset change karne ke baad "
+            "**Load Satellite Data** dobara click karein."
         )
 
         st.divider()
 
-        # ---------- Regional Evidence Engine ----------
+        # ==========================================
+        # REGIONAL SATELLITE EVIDENCE ENGINE
+        # ==========================================
 
         st.subheader(
             "🧠 Regional Satellite Evidence Engine"
         )
 
         st.write(
-            f"Selected region: **{region_name}**"
+            f"Analysis region: **{loaded_region}**"
         )
 
         analyze_clicked = st.button(
@@ -251,17 +368,31 @@ def satellite_dashboard():
         )
 
         if analyze_clicked:
+
             with st.spinner(
                 f"Analyzing satellite evidence "
-                f"for {region_name}..."
+                f"for {loaded_region}..."
             ):
-                evidence = get_satellite_evidence(
-                    start_date.strftime("%Y-%m-%d"),
-                    end_date.strftime("%Y-%m-%d"),
-                    region_name,
-                )
+
+                try:
+
+                    evidence = get_satellite_evidence(
+                        start_date.strftime("%Y-%m-%d"),
+                        end_date.strftime("%Y-%m-%d"),
+                        loaded_region,
+                    )
+
+                except Exception as error:
+
+                    st.error(
+                        "Regional satellite analysis failed."
+                    )
+
+                    st.code(str(error))
+                    evidence = None
 
             if evidence is None:
+
                 st.session_state.satellite_evidence = None
                 st.session_state.satellite_analysis = None
 
@@ -271,6 +402,7 @@ def satellite_dashboard():
                 )
 
             else:
+
                 analysis = (
                     generate_satellite_interpretation(
                         evidence
@@ -280,6 +412,7 @@ def satellite_dashboard():
                 st.session_state.satellite_evidence = (
                     evidence
                 )
+
                 st.session_state.satellite_analysis = (
                     analysis
                 )
@@ -296,6 +429,7 @@ def satellite_dashboard():
             evidence is not None
             and analysis is not None
         ):
+
             st.success(
                 f"Regional analysis completed for "
                 f"{evidence['region']}."
@@ -306,11 +440,19 @@ def satellite_dashboard():
             c1.metric(
                 "🧪 Mean HCHO",
                 evidence["hcho_mean"],
+                help=(
+                    "Tropospheric HCHO column density "
+                    "in mol/m²."
+                ),
             )
 
             c2.metric(
                 "🌫 Mean Aerosol Index",
                 evidence["aerosol_mean"],
+                help=(
+                    "Positive values may indicate "
+                    "UV-absorbing aerosol plumes."
+                ),
             )
 
             c3.metric(
@@ -318,6 +460,10 @@ def satellite_dashboard():
                 evidence[
                     "fire_detection_pixels"
                 ],
+                help=(
+                    "Detection pixels are not the same "
+                    "as confirmed individual fires."
+                ),
             )
 
             st.subheader(
@@ -330,12 +476,14 @@ def satellite_dashboard():
             )
 
             if analysis["signals"]:
+
                 st.write("**Signals detected:**")
 
                 for signal in analysis["signals"]:
                     st.write(f"• {signal}")
 
             else:
+
                 st.write(
                     "No prototype threshold signals "
                     "were detected."
@@ -344,6 +492,7 @@ def satellite_dashboard():
             with st.expander(
                 "View observation details"
             ):
+
                 st.write(
                     "HCHO images:",
                     evidence["hcho_image_count"],
@@ -364,18 +513,27 @@ def satellite_dashboard():
                 )
 
             st.caption(
-                "The current thresholds are prototype "
-                "decision rules, not validated scientific "
-                "classification standards. AstraAir reports "
-                "possible environmental influence and does "
-                "not claim causation without ground "
-                "validation."
+                "Current thresholds are prototype rules, "
+                "not validated scientific classification "
+                "standards. AstraAir does not claim source "
+                "causation without ground validation."
             )
 
         st.divider()
 
+        # ==========================================
+        # ENVIRONMENTAL FUSION ENGINE
+        # ==========================================
+
         st.subheader(
             "🌍 Satellite + Live Environmental Fusion"
+        )
+
+        st.warning(
+            "Satellite data uses the selected historical "
+            "date range, while AQI and weather values are "
+            "current live observations. The result is not "
+            "fully time-aligned."
         )
 
         fusion_clicked = st.button(
@@ -384,15 +542,34 @@ def satellite_dashboard():
         )
 
         if fusion_clicked:
+
             with st.spinner(
                 "Combining satellite observations, "
                 "live AQI and weather..."
             ):
-                fusion_result = get_environmental_fusion(
-                    start_date.strftime("%Y-%m-%d"),
-                    end_date.strftime("%Y-%m-%d"),
-                    region_name,
-                )
+
+                try:
+
+                    fusion_result = (
+                        get_environmental_fusion(
+                            start_date.strftime(
+                                "%Y-%m-%d"
+                            ),
+                            end_date.strftime(
+                                "%Y-%m-%d"
+                            ),
+                            loaded_region,
+                        )
+                    )
+
+                except Exception as error:
+
+                    st.error(
+                        "Environmental fusion analysis failed."
+                    )
+
+                    st.code(str(error))
+                    fusion_result = None
 
             st.session_state.environmental_fusion = (
                 fusion_result
@@ -403,12 +580,13 @@ def satellite_dashboard():
         )
 
         if fusion_result is not None:
+
             live = fusion_result["live"]
             fusion = fusion_result["fusion"]
 
             st.success(
                 f"Fusion analysis completed for "
-                f"{region_name}."
+                f"{loaded_region}."
             )
 
             f1, f2, f3, f4 = st.columns(4)
@@ -420,12 +598,12 @@ def satellite_dashboard():
 
             f2.metric(
                 "Average PM2.5",
-                live["average_pm2_5"],
+                f"{live['average_pm2_5']} µg/m³",
             )
 
             f3.metric(
                 "Average PM10",
-                live["average_pm10"],
+                f"{live['average_pm10']} µg/m³",
             )
 
             f4.metric(
@@ -447,16 +625,19 @@ def satellite_dashboard():
 
             w3.metric(
                 "Surface NO₂",
-                live["average_no2"],
+                f"{live['average_no2']} µg/m³",
             )
 
             st.subheader(
                 f"Fusion Level: {fusion['level']}"
             )
 
-            st.warning(fusion["summary"])
+            st.warning(
+                fusion["summary"]
+            )
 
             if fusion["signals"]:
+
                 st.write("**Combined signals:**")
 
                 for signal in fusion["signals"]:
@@ -465,21 +646,27 @@ def satellite_dashboard():
             with st.expander(
                 "View sampled city data"
             ):
+
                 st.dataframe(
                     live["locations"],
                     use_container_width=True,
                 )
 
             st.caption(
-                "This is a prototype evidence-fusion system. "
-                "It combines satellite observations with "
-                "OpenWeather air-pollution and weather data. "
+                "This prototype combines satellite "
+                "observations with current OpenWeather "
+                "pollution and weather information. "
                 "It does not prove emission-source causation."
             )
 
-        # ---------- Dataset explanation ----------
+        st.divider()
+
+        # ==========================================
+        # DATASET INTERPRETATION
+        # ==========================================
 
         if layer_name == "Sentinel-5P NO₂":
+
             st.subheader(
                 "🧠 NO₂ Interpretation"
             )
@@ -496,6 +683,7 @@ Higher NO₂ may be associated with:
             )
 
         elif layer_name == "Sentinel-5P HCHO":
+
             st.subheader(
                 "🧪 HCHO / Formaldehyde Interpretation"
             )
@@ -514,6 +702,7 @@ Higher HCHO may be associated with:
         elif layer_name == (
             "Sentinel-5P Aerosol Index"
         ):
+
             st.subheader(
                 "🌫 Aerosol Index Interpretation"
             )
@@ -534,13 +723,14 @@ The Aerosol Index is not a direct PM2.5 measurement.
         elif layer_name == (
             "NASA FIRMS Fire Hotspots"
         ):
+
             st.subheader(
                 "🔥 Active Fire Interpretation"
             )
 
             st.warning(
                 """
-NASA FIRMS observations indicate active fire or
+NASA FIRMS observations indicate active-fire or
 thermal-anomaly detections.
 
 Possible sources may include:
@@ -556,7 +746,8 @@ regional air pollution.
             )
 
     else:
+
         st.info(
-            "Select a dataset and click "
+            "Select a dataset and region, then click "
             "**Load Satellite Data**."
         )
