@@ -60,6 +60,10 @@ elif page == "🛰️ Satellite Intelligence":
 elif page == "🧠 Training Data":
     training_data_page()
     footer()
+elif page == "ℹ️ About":
+    about_page()
+    footer()
+
 else:
     st.title(page)
     st.info("This page will be built in the next sprint.")
