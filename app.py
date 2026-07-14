@@ -11,6 +11,7 @@ from pages.weather_page import weather_page
 from components.footer import footer
 from pages.reports import reports_page
 from pages.ai_insights import ai_insights_page
+from pages.training_data import training_data_page
 from pages.about import about_page
 from pages.satellite_page import satellite_page
 from pages.satellite_dashboard import satellite_dashboard
@@ -55,6 +56,9 @@ elif page == "🛰️ Satellite Explorer":
     footer()
 elif page == "🛰️ Satellite Intelligence":
     satellite_dashboard()
+    footer()
+elif page == "🧠 Training Data":
+    training_data_page()
     footer()
 else:
     st.title(page)

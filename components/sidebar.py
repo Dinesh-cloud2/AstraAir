@@ -18,6 +18,7 @@ def sidebar():
                 "📄 Reports",
                 "🛰️SatelliteExplorer",
                 "🛰️ Satellite Intelligence",
+                "🧠 Training Data",
                 "ℹ️ About"
             ]
         )
