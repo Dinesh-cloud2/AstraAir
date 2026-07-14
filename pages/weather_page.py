@@ -3,6 +3,7 @@ from services.weather import get_weather
 
 def weather_page():
     st.title("🌦️ Live Weather Dashboard")
+    st.caption("Live weather data — refreshed every 10 minutes.")
 
     city = st.text_input("Enter city", "Delhi")
 

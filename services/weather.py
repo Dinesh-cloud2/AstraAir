@@ -1,35 +1,40 @@
 import os
-import requests
 from pathlib import Path
 
+import requests
+import streamlit as st
+from dotenv import load_dotenv
+
+
 env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(dotenv_path=env_path, override=True)
+
 API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
-with open(env_path, "r") as f:
-    API_KEY = f.read().split("=")[1].strip()
 
+@st.cache_data(ttl=600, show_spinner=False)
 def get_weather(city):
-    print("API KEY LENGTH:", len(API_KEY))
 
     url = (
-        f"https://api.openweathermap.org/data/2.5/weather"
+        "https://api.openweathermap.org/data/2.5/weather"
         f"?q={city}&appid={API_KEY}&units=metric"
     )
 
-    response = requests.get(url)
+    try:
+        response = requests.get(url, timeout=10)
 
-    print("Status Code:", response.status_code)
-    print("Response:", response.text)
+        if response.status_code != 200:
+            return None
 
-    if response.status_code != 200:
+        data = response.json()
+
+        return {
+            "temperature": data["main"]["temp"],
+            "humidity": data["main"]["humidity"],
+            "wind": data["wind"]["speed"],
+            "description": data["weather"][0]["description"].title(),
+            "icon": data["weather"][0]["icon"],
+        }
+
+    except requests.RequestException:
         return None
-
-    data = response.json()
-
-    return {
-        "temperature": data["main"]["temp"],
-        "humidity": data["main"]["humidity"],
-        "wind": data["wind"]["speed"],
-        "description": data["weather"][0]["description"].title(),
-        "icon": data["weather"][0]["icon"]
-    }

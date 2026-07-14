@@ -18,6 +18,9 @@ from utils.aqi_utils import (
 def map_page():
 
     st.title("🗺️ Live India AQI Map")
+    st.caption(
+        "Live AQI and pollutant data from OpenWeather — refreshed every 10 minutes."
+    )
 
     df = pd.read_csv("data/cities.csv")
 

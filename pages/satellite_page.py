@@ -9,6 +9,10 @@ from satellite.no2 import get_no2_tile_url
 
 def satellite_page():
     st.title("🛰️ Sentinel-5P NO₂ Explorer")
+    st.caption(
+        "Satellite layers use the selected historical date range. "
+        "Live AQI and weather are current observations."
+   )
 
     st.write(
         "Explore satellite-observed tropospheric nitrogen dioxide over India."
