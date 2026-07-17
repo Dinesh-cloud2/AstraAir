@@ -1,143 +1,644 @@
-import streamlit as st
-import pandas as pd
-from fpdf import FPDF
-from pathlib import Path
 from datetime import datetime
 
+import streamlit as st
+from fpdf import FPDF
+
 from services.aqi import get_live_aqi
+from services.cities import get_cities
 from services.weather import get_weather
 
+from utils.aqi_utils import (
+    get_aqi_label,
+    get_health_advice,
+    get_risk_level,
+)
 
-def get_aqi_label(aqi):
-    labels = {
-        1: "Good",
-        2: "Fair",
-        3: "Moderate",
-        4: "Poor",
-        5: "Very Poor"
+
+def clean_pdf_text(text):
+    replacements = {
+        "🟢": "",
+        "🟡": "",
+        "🟠": "",
+        "🔴": "",
+        "🚨": "",
+        "🌫": "",
+        "🌦": "",
+        "🏥": "",
+        "📄": "",
+        "µ": "u",
+        "³": "3",
+        "₂": "2",
+        "₃": "3",
+        "–": "-",
+        "—": "-",
+        "→": "to",
     }
-    return labels.get(aqi, "Unknown")
+
+    text = str(text)
+
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    return text.strip()
 
 
-def get_health_advice(aqi):
-    if aqi == 1:
-        return "Air quality is good. Outdoor activities are safe."
-    elif aqi == 2:
-        return "Air quality is fair. Most people can continue normal activity."
-    elif aqi == 3:
-        return "Moderate pollution. Sensitive people should reduce long outdoor activity."
-    elif aqi == 4:
-        return "Poor air quality. Wear a mask outdoors and avoid heavy exercise."
+def create_environment_report(
+    city,
+    state,
+    air,
+    weather,
+):
+    aqi_level = air["aqi"]
+
+    aqi_label = clean_pdf_text(
+        get_aqi_label(aqi_level)
+    )
+
+    risk_level = clean_pdf_text(
+        get_risk_level(aqi_level)
+    )
+
+    advice = clean_pdf_text(
+        get_health_advice(aqi_level)
+    )
+
+    pdf = FPDF()
+
+    pdf.add_page()
+
+    pdf.set_auto_page_break(
+        auto=True,
+        margin=15,
+    )
+
+    # ==========================================
+    # REPORT TITLE
+    # ==========================================
+
+    pdf.set_font(
+        "Arial",
+        "B",
+        18,
+    )
+
+    pdf.multi_cell(
+        0,
+        10,
+        "AstraAir Environmental Intelligence Report",
+    )
+
+    pdf.ln(3)
+
+    pdf.set_font(
+        "Arial",
+        size=11,
+    )
+
+    generated_time = datetime.now().strftime(
+        "%d-%m-%Y %H:%M"
+    )
+
+    pdf.cell(
+        0,
+        8,
+        clean_pdf_text(
+            f"Generated On: {generated_time}"
+        ),
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+
+    pdf.cell(
+        0,
+        8,
+        clean_pdf_text(
+            f"Location: {city}, {state}"
+        ),
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+
+    pdf.ln(5)
+
+    # ==========================================
+    # AIR QUALITY SECTION
+    # ==========================================
+
+    pdf.set_font(
+        "Arial",
+        "B",
+        14,
+    )
+
+    pdf.cell(
+        0,
+        10,
+        "Current Air Quality Summary",
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+
+    pdf.set_font(
+        "Arial",
+        size=11,
+    )
+
+    pdf.cell(
+        0,
+        8,
+        clean_pdf_text(
+            f"OpenWeather AQI Level: {aqi_level}/5"
+        ),
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+
+    pdf.cell(
+        0,
+        8,
+        clean_pdf_text(
+            f"AQI Category: {aqi_label}"
+        ),
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+
+    pdf.cell(
+        0,
+        8,
+        clean_pdf_text(
+            f"Risk Level: {risk_level}"
+        ),
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+
+    pdf.cell(
+        0,
+        8,
+        clean_pdf_text(
+            f"PM2.5: {air['pm2_5']} ug/m3"
+        ),
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+
+    pdf.cell(
+        0,
+        8,
+        clean_pdf_text(
+            f"PM10: {air['pm10']} ug/m3"
+        ),
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+
+    pdf.cell(
+        0,
+        8,
+        clean_pdf_text(
+            f"NO2: {air['no2']} ug/m3"
+        ),
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+
+    pdf.cell(
+        0,
+        8,
+        clean_pdf_text(
+            f"O3: {air['o3']} ug/m3"
+        ),
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+
+    pdf.cell(
+        0,
+        8,
+        clean_pdf_text(
+            f"CO: {air['co']} ug/m3"
+        ),
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+
+    pdf.ln(5)
+
+    # ==========================================
+    # WEATHER SECTION
+    # ==========================================
+
+    pdf.set_font(
+        "Arial",
+        "B",
+        14,
+    )
+
+    pdf.cell(
+        0,
+        10,
+        "Current Weather Summary",
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+
+    pdf.set_font(
+        "Arial",
+        size=11,
+    )
+
+    if weather:
+
+        pdf.cell(
+            0,
+            8,
+            clean_pdf_text(
+                f"Temperature: "
+                f"{weather['temperature']} C"
+            ),
+            new_x="LMARGIN",
+            new_y="NEXT",
+        )
+
+        pdf.cell(
+            0,
+            8,
+            clean_pdf_text(
+                f"Humidity: "
+                f"{weather['humidity']} %"
+            ),
+            new_x="LMARGIN",
+            new_y="NEXT",
+        )
+
+        pdf.cell(
+            0,
+            8,
+            clean_pdf_text(
+                f"Wind Speed: "
+                f"{weather['wind']} m/s"
+            ),
+            new_x="LMARGIN",
+            new_y="NEXT",
+        )
+
+        pdf.cell(
+            0,
+            8,
+            clean_pdf_text(
+                f"Condition: "
+                f"{weather['description']}"
+            ),
+            new_x="LMARGIN",
+            new_y="NEXT",
+        )
+
     else:
-        return "Very poor air quality. Avoid outdoor exposure. Children and elderly should stay indoors."
+
+        pdf.cell(
+            0,
+            8,
+            "Weather data unavailable.",
+            new_x="LMARGIN",
+            new_y="NEXT",
+        )
+
+    pdf.ln(5)
+
+    # ==========================================
+    # HEALTH RECOMMENDATION
+    # ==========================================
+
+    pdf.set_font(
+        "Arial",
+        "B",
+        14,
+    )
+
+    pdf.cell(
+        0,
+        10,
+        "Health Recommendation",
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+
+    pdf.set_font(
+        "Arial",
+        size=11,
+    )
+
+    pdf.multi_cell(
+        0,
+        8,
+        advice,
+    )
+
+    pdf.ln(5)
+
+    # ==========================================
+    # DISCLAIMER
+    # ==========================================
+
+    pdf.set_font(
+        "Arial",
+        "I",
+        9,
+    )
+
+    disclaimer = (
+        "Note: The AQI category uses the OpenWeather "
+        "Air Pollution API scale from 1 Good to "
+        "5 Very Poor. Pollutant values are current "
+        "API observations and may differ from official "
+        "CPCB monitoring-station measurements."
+    )
+
+    pdf.multi_cell(
+        0,
+        7,
+        clean_pdf_text(disclaimer),
+    )
+
+    pdf_bytes = pdf.output()
+
+    if isinstance(pdf_bytes, str):
+        pdf_bytes = pdf_bytes.encode(
+            "latin-1"
+        )
+
+    return bytes(pdf_bytes)
 
 
 def reports_page():
 
-    st.title("📄 Live Environmental Report Generator")
+    st.title(
+        "📄 Live Environmental Report Generator"
+    )
 
-    df = pd.read_csv("data/cities.csv")
+    st.caption(
+        "Generate a downloadable environmental report "
+        "using current AQI, pollutant and weather data."
+    )
 
-    city = st.selectbox("Select City", sorted(df["City"].unique()))
+    # ==========================================
+    # LOAD SHARED CITY DATASET
+    # ==========================================
 
-    row = df[df["City"] == city].iloc[0]
+    cities_df = get_cities()
 
-    air = get_live_aqi(row["Latitude"], row["Longitude"])
-    weather = get_weather(city)
-
-    if not air:
-        st.error("Live AQI data not available.")
+    if cities_df.empty:
+        st.error(
+            "City dataset is empty."
+        )
         return
 
-    aqi = air["aqi"]
-    label = get_aqi_label(aqi)
-    advice = get_health_advice(aqi)
+    city_options = cities_df.apply(
+        lambda row: (
+            f"{row['City']}, {row['State']}"
+        ),
+        axis=1,
+    ).tolist()
 
-    st.subheader("Report Preview")
+    selected_option = st.selectbox(
+        "📍 Select City",
+        city_options,
+    )
 
-    c1, c2, c3 = st.columns(3)
+    selected_row = cities_df[
+        cities_df.apply(
+            lambda row: (
+                f"{row['City']}, {row['State']}"
+                == selected_option
+            ),
+            axis=1,
+        )
+    ].iloc[0]
 
-    c1.metric("AQI Level", f"{aqi} ({label})")
-    c2.metric("PM2.5", air["pm2_5"])
-    c3.metric("PM10", air["pm10"])
+    city = selected_row["City"]
+    state = selected_row["State"]
 
-    if weather:
-        w1, w2, w3 = st.columns(3)
-        w1.metric("Temperature", f"{weather['temperature']} °C")
-        w2.metric("Humidity", f"{weather['humidity']} %")
-        w3.metric("Wind", f"{weather['wind']} m/s")
+    latitude = float(
+        selected_row["Latitude"]
+    )
 
-    st.warning(advice)
+    longitude = float(
+        selected_row["Longitude"]
+    )
 
-    if st.button("Generate Live PDF Report"):
+    # ==========================================
+    # REFRESH BUTTON
+    # ==========================================
 
-        Path("reports").mkdir(exist_ok=True)
+    if st.button(
+        "🔄 Refresh Report Data",
+        use_container_width=True,
+    ):
 
-        filename = f"reports/{city}_live_environment_report.pdf"
+        get_live_aqi.clear()
+        get_weather.clear()
 
-        pdf = FPDF()
-        pdf.add_page()
+        st.rerun()
 
-        pdf.set_font("Arial", "B", 18)
-        pdf.cell(200, 12, "AstraAir Environmental Intelligence Report", ln=True)
+    # ==========================================
+    # FETCH LIVE DATA
+    # ==========================================
 
-        pdf.set_font("Arial", size=11)
-        pdf.cell(200, 8, f"Generated On: {datetime.now().strftime('%d-%m-%Y %H:%M')}", ln=True)
-        pdf.cell(200, 8, f"City: {city}", ln=True)
+    with st.spinner(
+        f"Loading live environmental data for "
+        f"{city}, {state}..."
+    ):
 
-        pdf.ln(6)
-
-        pdf.set_font("Arial", "B", 14)
-        pdf.cell(200, 10, "Live AQI Summary", ln=True)
-
-        pdf.set_font("Arial", size=11)
-        pdf.cell(200, 8, f"AQI Level: {aqi} ({label})", ln=True)
-        pdf.cell(200, 8, f"PM2.5: {air['pm2_5']} ug/m3", ln=True)
-        pdf.cell(200, 8, f"PM10: {air['pm10']} ug/m3", ln=True)
-        pdf.cell(200, 8, f"NO2: {air['no2']} ug/m3", ln=True)
-        pdf.cell(200, 8, f"O3: {air['o3']} ug/m3", ln=True)
-        pdf.cell(200, 8, f"CO: {air['co']} ug/m3", ln=True)
-
-        pdf.ln(6)
-
-        pdf.set_font("Arial", "B", 14)
-        pdf.cell(200, 10, "Live Weather Summary", ln=True)
-
-        pdf.set_font("Arial", size=11)
-
-        if weather:
-            pdf.cell(200, 8, f"Temperature: {weather['temperature']} C", ln=True)
-            pdf.cell(200, 8, f"Humidity: {weather['humidity']} %", ln=True)
-            pdf.cell(200, 8, f"Wind Speed: {weather['wind']} m/s", ln=True)
-            pdf.cell(200, 8, f"Condition: {weather['description']}", ln=True)
-        else:
-            pdf.cell(200, 8, "Weather data unavailable.", ln=True)
-
-        pdf.ln(6)
-
-        pdf.set_font("Arial", "B", 14)
-        pdf.cell(200, 10, "Health Recommendation", ln=True)
-
-        pdf.set_font("Arial", size=11)
-        pdf.multi_cell(0, 8, advice)
-
-        pdf.ln(6)
-
-        pdf.set_font("Arial", "I", 10)
-        pdf.multi_cell(
-            0,
-            8,
-            "Note: AQI level is based on OpenWeather Air Pollution API scale from 1 Good to 5 Very Poor."
+        air = get_live_aqi(
+            latitude,
+            longitude,
         )
 
-        pdf.output(filename)
+        weather = get_weather(
+            city=city,
+            lat=latitude,
+            lon=longitude,
+        )
 
-        st.success("Live PDF report generated successfully!")
+    if not air:
 
-        with open(filename, "rb") as file:
-            st.download_button(
-                "⬇ Download Live PDF Report",
-                file,
-                file_name=f"{city}_live_environment_report.pdf",
-                mime="application/pdf"
-            )
+        st.error(
+            "Live AQI data is currently unavailable."
+        )
+
+        return
+
+    aqi_level = air["aqi"]
+
+    aqi_label = get_aqi_label(
+        aqi_level
+    )
+
+    risk_level = get_risk_level(
+        aqi_level
+    )
+
+    # ==========================================
+    # REPORT PREVIEW
+    # ==========================================
+
+    st.subheader(
+        "Report Preview"
+    )
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    c1.metric(
+        "AQI Level",
+        f"{aqi_level}/5",
+    )
+
+    c2.metric(
+        "Category",
+        aqi_label,
+    )
+
+    c3.metric(
+        "Risk Level",
+        risk_level,
+    )
+
+    c4.metric(
+        "Location",
+        city,
+    )
+
+    st.divider()
+
+    p1, p2, p3, p4, p5 = st.columns(5)
+
+    p1.metric(
+        "PM2.5",
+        f"{air['pm2_5']} µg/m³",
+    )
+
+    p2.metric(
+        "PM10",
+        f"{air['pm10']} µg/m³",
+    )
+
+    p3.metric(
+        "NO₂",
+        f"{air['no2']} µg/m³",
+    )
+
+    p4.metric(
+        "O₃",
+        f"{air['o3']} µg/m³",
+    )
+
+    p5.metric(
+        "CO",
+        f"{air['co']} µg/m³",
+    )
+
+    # ==========================================
+    # WEATHER PREVIEW
+    # ==========================================
+
+    if weather:
+
+        st.divider()
+
+        st.subheader(
+            "Current Weather"
+        )
+
+        w1, w2, w3, w4 = st.columns(4)
+
+        w1.metric(
+            "Temperature",
+            f"{weather['temperature']} °C",
+        )
+
+        w2.metric(
+            "Humidity",
+            f"{weather['humidity']} %",
+        )
+
+        w3.metric(
+            "Wind",
+            f"{weather['wind']} m/s",
+        )
+
+        w4.metric(
+            "Condition",
+            weather["description"],
+        )
+
+    else:
+
+        st.warning(
+            "Weather data is currently unavailable."
+        )
+
+    # ==========================================
+    # HEALTH RECOMMENDATION
+    # ==========================================
+
+    st.divider()
+
+    st.subheader(
+        "🏥 Health Recommendation"
+    )
+
+    st.warning(
+        get_health_advice(
+            aqi_level
+        )
+    )
+
+    # ==========================================
+    # GENERATE PDF
+    # ==========================================
+
+    try:
+
+        pdf_data = create_environment_report(
+            city=city,
+            state=state,
+            air=air,
+            weather=weather,
+        )
+
+    except Exception as error:
+
+        st.error(
+            "PDF report could not be generated."
+        )
+
+        st.code(
+            str(error)
+        )
+
+        return
+
+    safe_city_name = (
+        str(city)
+        .lower()
+        .replace(" ", "_")
+    )
+
+    st.download_button(
+        "⬇️ Download Live PDF Report",
+        data=pdf_data,
+        file_name=(
+            f"{safe_city_name}_"
+            f"environment_report.pdf"
+        ),
+        mime="application/pdf",
+        type="primary",
+        use_container_width=True,
+    )
+
+    st.caption(
+        "This report uses current OpenWeather "
+        "observations. It is not an official CPCB "
+        "monitoring or medical report."
+    )

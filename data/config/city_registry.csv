@@ -1,0 +1,26 @@
+location_id,city,state,region,latitude,longitude,enabled,buffer_km
+IND-001,New Delhi,Delhi,North,28.6139,77.2090,True,20
+IND-002,Dwarka,Delhi,North,28.5921,77.0460,True,20
+IND-003,Rohini,Delhi,North,28.7495,77.0565,True,20
+IND-004,Gurugram,Haryana,North,28.4595,77.0266,True,20
+IND-005,Faridabad,Haryana,North,28.4089,77.3178,True,20
+IND-006,Chandigarh,Chandigarh,North,30.7333,76.7794,True,20
+IND-007,Ludhiana,Punjab,North,30.9010,75.8573,True,20
+IND-008,Amritsar,Punjab,North,31.6340,74.8723,True,20
+IND-009,Kanpur,Uttar Pradesh,North,26.4499,80.3319,True,20
+IND-010,Lucknow,Uttar Pradesh,North,26.8467,80.9462,True,20
+IND-011,Noida,Uttar Pradesh,North,28.5355,77.3910,True,20
+IND-012,Agra,Uttar Pradesh,North,27.1767,78.0081,True,20
+IND-013,Patna,Bihar,East,25.5941,85.1376,True,20
+IND-014,Gaya,Bihar,East,24.7914,85.0002,True,20
+IND-015,Kolkata,West Bengal,East,22.5726,88.3639,True,20
+IND-016,Mumbai,Maharashtra,West,19.0760,72.8777,True,20
+IND-017,Pune,Maharashtra,West,18.5204,73.8567,True,20
+IND-018,Ahmedabad,Gujarat,West,23.0225,72.5714,True,20
+IND-019,Jaipur,Rajasthan,West,26.9124,75.7873,True,20
+IND-020,Bengaluru,Karnataka,South,12.9716,77.5946,True,20
+IND-021,Chennai,Tamil Nadu,South,13.0827,80.2707,True,20
+IND-022,Hyderabad,Telangana,South,17.3850,78.4867,True,20
+IND-023,Kochi,Kerala,South,9.9312,76.2673,True,20
+IND-024,Guwahati,Assam,Northeast,26.1445,91.7362,True,20
+IND-025,Shillong,Meghalaya,Northeast,25.5788,91.8933,True,20

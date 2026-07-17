@@ -1,16 +1,64 @@
-City,Latitude,Longitude,AQI,Temperature,Humidity,Wind
-Delhi,28.6139,77.2090,182,29,75,2.3
-Mumbai,19.0760,72.8777,95,30,82,4.1
-Bengaluru,12.9716,77.5946,68,25,70,3.2
-Chennai,13.0827,80.2707,82,31,80,5.0
-Hyderabad,17.3850,78.4867,90,28,65,3.8
-Ahmedabad,23.0225,72.5714,120,33,55,2.7
-Kolkata,22.5726,88.3639,165,30,85,3.1
-Pune,18.5204,73.8567,88,27,72,4.0
-Jaipur,26.9124,75.7873,135,35,40,2.0
-Lucknow,26.8467,80.9462,172,31,68,2.5
-Bhopal,23.2599,77.4126,98,29,60,3.5
-Patna,25.5941,85.1376,158,32,74,2.8
-Kanpur,26.4499,80.3319,176,34,58,2.2
-Nagpur,21.1458,79.0882,102,33,52,3.6
-Surat,21.1702,72.8311,92,31,78,4.3
+City,State,Latitude,Longitude
+Delhi,Delhi,28.6139,77.2090
+Kanpur,Uttar Pradesh,26.4499,80.3319
+Lucknow,Uttar Pradesh,26.8467,80.9462
+Varanasi,Uttar Pradesh,25.3176,82.9739
+Agra,Uttar Pradesh,27.1767,78.0081
+Prayagraj,Uttar Pradesh,25.4358,81.8463
+Noida,Uttar Pradesh,28.5355,77.3910
+Ghaziabad,Uttar Pradesh,28.6692,77.4538
+Meerut,Uttar Pradesh,28.9845,77.7064
+Gorakhpur,Uttar Pradesh,26.7606,83.3732
+Mumbai,Maharashtra,19.0760,72.8777
+Pune,Maharashtra,18.5204,73.8567
+Nagpur,Maharashtra,21.1458,79.0882
+Nashik,Maharashtra,19.9975,73.7898
+Thane,Maharashtra,19.2183,72.9781
+Bengaluru,Karnataka,12.9716,77.5946
+Mysuru,Karnataka,12.2958,76.6394
+Mangaluru,Karnataka,12.9141,74.8560
+Chennai,Tamil Nadu,13.0827,80.2707
+Coimbatore,Tamil Nadu,11.0168,76.9558
+Madurai,Tamil Nadu,9.9252,78.1198
+Hyderabad,Telangana,17.3850,78.4867
+Warangal,Telangana,17.9689,79.5941
+Kolkata,West Bengal,22.5726,88.3639
+Siliguri,West Bengal,26.7271,88.3953
+Patna,Bihar,25.5941,85.1376
+Gaya,Bihar,24.7914,85.0002
+Muzaffarpur,Bihar,26.1209,85.3647
+Ahmedabad,Gujarat,23.0225,72.5714
+Surat,Gujarat,21.1702,72.8311
+Vadodara,Gujarat,22.3072,73.1812
+Rajkot,Gujarat,22.3039,70.8022
+Jaipur,Rajasthan,26.9124,75.7873
+Jodhpur,Rajasthan,26.2389,73.0243
+Udaipur,Rajasthan,24.5854,73.7125
+Kota,Rajasthan,25.2138,75.8648
+Chandigarh,Chandigarh,30.7333,76.7794
+Ludhiana,Punjab,30.9010,75.8573
+Amritsar,Punjab,31.6340,74.8723
+Patiala,Punjab,30.3398,76.3869
+Gurugram,Haryana,28.4595,77.0266
+Faridabad,Haryana,28.4089,77.3178
+Panipat,Haryana,29.3909,76.9635
+Dehradun,Uttarakhand,30.3165,78.0322
+Haridwar,Uttarakhand,29.9457,78.1642
+Shimla,Himachal Pradesh,31.1048,77.1734
+Srinagar,Jammu and Kashmir,34.0837,74.7973
+Jammu,Jammu and Kashmir,32.7266,74.8570
+Bhopal,Madhya Pradesh,23.2599,77.4126
+Indore,Madhya Pradesh,22.7196,75.8577
+Jabalpur,Madhya Pradesh,23.1815,79.9864
+Raipur,Chhattisgarh,21.2514,81.6296
+Ranchi,Jharkhand,23.3441,85.3096
+Jamshedpur,Jharkhand,22.8046,86.2029
+Bhubaneswar,Odisha,20.2961,85.8245
+Cuttack,Odisha,20.4625,85.8830
+Guwahati,Assam,26.1445,91.7362
+Shillong,Meghalaya,25.5788,91.8933
+Imphal,Manipur,24.8170,93.9368
+Agartala,Tripura,23.8315,91.2868
+Kochi,Kerala,9.9312,76.2673
+Thiruvananthapuram,Kerala,8.5241,76.9366
+Panaji,Goa,15.4909,73.8278

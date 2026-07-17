@@ -14,9 +14,22 @@ def satellite_page():
         "Live AQI and weather are current observations."
    )
 
-    st.write(
-        "Explore satellite-observed tropospheric nitrogen dioxide over India."
+    st.info(
+    """
+    ### Satellite Layer
+
+    This page visualizes **Sentinel-5P satellite observations**
+    processed through **Google Earth Engine**.
+
+    Current layer:
+    - 🟠 Tropospheric NO₂
+    - Historical satellite imagery
+    - India coverage
+
+    Choose a date range below to visualize pollution patterns.
+    """
     )
+        
 
     today = date.today()
     default_start = today - timedelta(days=7)
@@ -60,7 +73,9 @@ def satellite_page():
         st.warning("No Sentinel-5P NO₂ images found for this date range.")
         return
 
-    st.success(f"Loaded {image_count} satellite images.")
+    st.success(
+        f"Successfully loaded **{image_count} Sentinel-5P observations**."
+    )
 
     satellite_map = folium.Map(
         location=[22.5, 79.0],
@@ -86,5 +101,13 @@ def satellite_page():
     )
 
     st.caption(
-        "Blue indicates lower NO₂ concentration; yellow, orange, and red indicate higher concentration."
+        """
+        Blue → Lower NO₂ concentration
+
+        Yellow / Orange → Moderate concentration
+
+        Red → Higher NO₂ concentration
+        
+        Sentinel-5P • Google Earth Engine
+        """
     )

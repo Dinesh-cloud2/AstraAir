@@ -485,8 +485,8 @@ Future ML Model + Explainability
         )
 
         st.metric(
-            "Current Stage",
-            # "Final Stabilization",
+            label="Cities Covered",
+            value="60+"
         )
 
     with developer_col2:
