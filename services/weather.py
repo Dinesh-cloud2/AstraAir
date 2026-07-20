@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import requests
@@ -7,25 +6,42 @@ from dotenv import load_dotenv
 
 
 env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(dotenv_path=env_path, override=True)
+load_dotenv(dotenv_path=env_path)
 
-API_KEY = os.getenv("OPENWEATHER_API_KEY")
+BASE_URL = (
+    "https://api.openweathermap.org/data/2.5/weather"
+)
 
-BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
+
+def get_api_key():
+    try:
+        key = st.secrets.get("OPENWEATHER_API_KEY")
+        if key:
+            return str(key)
+    except Exception:
+        pass
+
+    import os
+
+    return os.getenv("OPENWEATHER_API_KEY")
 
 
 @st.cache_data(ttl=600, show_spinner=False)
 def get_weather(city=None, lat=None, lon=None):
 
-    if not API_KEY:
+    api_key = get_api_key()
+
+    if not api_key:
+        st.error(
+            "OPENWEATHER_API_KEY is missing in Streamlit Secrets."
+        )
         return None
 
     params = {
-        "appid": API_KEY,
+        "appid": api_key,
         "units": "metric",
     }
 
-    # Coordinates are more reliable
     if lat is not None and lon is not None:
         params["lat"] = lat
         params["lon"] = lon
@@ -44,6 +60,11 @@ def get_weather(city=None, lat=None, lon=None):
         )
 
         if response.status_code != 200:
+            st.error(
+                f"OpenWeather Weather API error: "
+                f"{response.status_code}"
+            )
+            st.code(response.text)
             return None
 
         data = response.json()
@@ -58,5 +79,6 @@ def get_weather(city=None, lat=None, lon=None):
             "icon": data["weather"][0]["icon"],
         }
 
-    except requests.RequestException:
+    except requests.RequestException as error:
+        st.error(f"Weather request failed: {error}")
         return None
